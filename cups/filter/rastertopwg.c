@@ -17,42 +17,42 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-
 /*
  * 'main()' - Main entry for filter.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line args */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line args */
+     char *argv[]) /* I - Command-line arguments */
 {
-  const char		*final_content_type;
-					/* FINAL_CONTENT_TYPE env var */
-  int			fd;		/* Raster file */
-  cups_raster_t		*inras,		/* Input raster stream */
-			*outras;	/* Output raster stream */
-  cups_page_header2_t	inheader,	/* Input raster page header */
-			outheader;	/* Output raster page header */
-  unsigned		y;		/* Current line */
-  unsigned char		*line;		/* Line buffer */
-  unsigned		page = 0,	/* Current page */
-			page_width,	/* Actual page width */
-			page_height,	/* Actual page height */
-			page_top,	/* Top margin */
-			page_bottom,	/* Bottom margin */
-			page_left,	/* Left margin */
-			linesize,	/* Bytes per line */
-			lineoffset;	/* Offset into line */
-  unsigned char		white;		/* White pixel */
-  ppd_file_t		*ppd;		/* PPD file */
-  ppd_attr_t		*back;		/* cupsBackSide attribute */
-  _ppd_cache_t		*cache;		/* PPD cache */
-  pwg_size_t		*pwg_size;	/* PWG media size */
-  pwg_media_t		*pwg_media;	/* PWG media name */
-  int	 		num_options;	/* Number of options */
-  cups_option_t		*options = NULL;/* Options */
-  const char		*val;		/* Option value */
+  const char *final_content_type;
+  /* FINAL_CONTENT_TYPE env var */
+  int fd;                        /* Raster file */
+  cups_raster_t *inras,          /* Input raster stream */
+      *outras;                   /* Output raster stream */
+  cups_page_header2_t inheader,  /* Input raster page header */
+      outheader;                 /* Output raster page header */
+  unsigned y;                    /* Current line */
+  unsigned char *line;           /* Line buffer */
+  unsigned page = 0,             /* Current page */
+      page_width,                /* Actual page width */
+      page_height,               /* Actual page height */
+      page_top,                  /* Top margin */
+      page_bottom,               /* Bottom margin */
+      page_left,                 /* Left margin */
+      linesize,                  /* Bytes per line */
+      lineoffset;                /* Offset into line */
+  unsigned char white;           /* White pixel */
+  ppd_file_t *ppd;               /* PPD file */
+  ppd_attr_t *back;              /* cupsBackSide attribute */
+  _ppd_cache_t *cache;           /* PPD cache */
+  pwg_size_t *pwg_size;          /* PWG media size */
+  pwg_media_t *pwg_media;        /* PWG media name */
+  int num_options;               /* Number of options */
+  cups_option_t *options = NULL; /* Options */
+  const char *val;               /* Option value */
 
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 
   if (argc < 6 || argc > 7)
   {
@@ -73,11 +73,11 @@ main(int  argc,				/* I - Number of command-line args */
   if ((final_content_type = getenv("FINAL_CONTENT_TYPE")) == NULL)
     final_content_type = "image/pwg-raster";
 
-  inras  = cupsRasterOpen(fd, CUPS_RASTER_READ);
+  inras = cupsRasterOpen(fd, CUPS_RASTER_READ);
   outras = cupsRasterOpen(1, !strcmp(final_content_type, "image/pwg-raster") ? CUPS_RASTER_WRITE_PWG : CUPS_RASTER_WRITE_APPLE);
 
-  ppd   = ppdOpenFile(getenv("PPD"));
-  back  = ppdFindAttr(ppd, "cupsBackSide", NULL);
+  ppd = ppdOpenFile(getenv("PPD"));
+  back = ppdFindAttr(ppd, "cupsBackSide", NULL);
 
   num_options = cupsParseOptions(argv[5], 0, &options);
 
@@ -88,9 +88,9 @@ main(int  argc,				/* I - Number of command-line args */
 
   while (cupsRasterReadHeader2(inras, &inheader))
   {
-   /*
-    * Show page device dictionary...
-    */
+    /*
+     * Show page device dictionary...
+     */
 
     fprintf(stderr, "DEBUG: Duplex = %d\n", inheader.Duplex);
     fprintf(stderr, "DEBUG: HWResolution = [ %d %d ]\n", inheader.HWResolution[0], inheader.HWResolution[1]);
@@ -111,21 +111,21 @@ main(int  argc,				/* I - Number of command-line args */
     fprintf(stderr, "DEBUG: cupsColorSpace = %d\n", inheader.cupsColorSpace);
     fprintf(stderr, "DEBUG: cupsCompression = %d\n", inheader.cupsCompression);
 
-   /*
-    * Compute the real raster size...
-    */
+    /*
+     * Compute the real raster size...
+     */
 
-    page ++;
+    page++;
 
     fprintf(stderr, "PAGE: %d %d\n", page, inheader.NumCopies);
 
-    page_width  = (unsigned)(inheader.cupsPageSize[0] * inheader.HWResolution[0] / 72.0);
+    page_width = (unsigned)(inheader.cupsPageSize[0] * inheader.HWResolution[0] / 72.0);
     page_height = (unsigned)(inheader.cupsPageSize[1] * inheader.HWResolution[1] / 72.0);
-    page_left   = (unsigned)(inheader.cupsImagingBBox[0] * inheader.HWResolution[0] / 72.0);
+    page_left = (unsigned)(inheader.cupsImagingBBox[0] * inheader.HWResolution[0] / 72.0);
     page_bottom = (unsigned)(inheader.cupsImagingBBox[1] * inheader.HWResolution[1] / 72.0);
-    page_top    = page_height - page_bottom - inheader.cupsHeight;
-    linesize    = (page_width * inheader.cupsBitsPerPixel + 7) / 8;
-    lineoffset  = page_left * inheader.cupsBitsPerPixel / 8; /* Round down */
+    page_top = page_height - page_bottom - inheader.cupsHeight;
+    linesize = (page_width * inheader.cupsBitsPerPixel + 7) / 8;
+    lineoffset = page_left * inheader.cupsBitsPerPixel / 8; /* Round down */
 
     if (page_left > page_width || page_top > page_height || page_bottom > page_height)
     {
@@ -136,39 +136,39 @@ main(int  argc,				/* I - Number of command-line args */
 
     switch (inheader.cupsColorSpace)
     {
-      case CUPS_CSPACE_W :
-      case CUPS_CSPACE_RGB :
-      case CUPS_CSPACE_SW :
-      case CUPS_CSPACE_SRGB :
-      case CUPS_CSPACE_ADOBERGB :
-          white = 255;
-	  break;
+    case CUPS_CSPACE_W:
+    case CUPS_CSPACE_RGB:
+    case CUPS_CSPACE_SW:
+    case CUPS_CSPACE_SRGB:
+    case CUPS_CSPACE_ADOBERGB:
+      white = 255;
+      break;
 
-      case CUPS_CSPACE_K :
-      case CUPS_CSPACE_CMYK :
-      case CUPS_CSPACE_DEVICE1 :
-      case CUPS_CSPACE_DEVICE2 :
-      case CUPS_CSPACE_DEVICE3 :
-      case CUPS_CSPACE_DEVICE4 :
-      case CUPS_CSPACE_DEVICE5 :
-      case CUPS_CSPACE_DEVICE6 :
-      case CUPS_CSPACE_DEVICE7 :
-      case CUPS_CSPACE_DEVICE8 :
-      case CUPS_CSPACE_DEVICE9 :
-      case CUPS_CSPACE_DEVICEA :
-      case CUPS_CSPACE_DEVICEB :
-      case CUPS_CSPACE_DEVICEC :
-      case CUPS_CSPACE_DEVICED :
-      case CUPS_CSPACE_DEVICEE :
-      case CUPS_CSPACE_DEVICEF :
-          white = 0;
-	  break;
+    case CUPS_CSPACE_K:
+    case CUPS_CSPACE_CMYK:
+    case CUPS_CSPACE_DEVICE1:
+    case CUPS_CSPACE_DEVICE2:
+    case CUPS_CSPACE_DEVICE3:
+    case CUPS_CSPACE_DEVICE4:
+    case CUPS_CSPACE_DEVICE5:
+    case CUPS_CSPACE_DEVICE6:
+    case CUPS_CSPACE_DEVICE7:
+    case CUPS_CSPACE_DEVICE8:
+    case CUPS_CSPACE_DEVICE9:
+    case CUPS_CSPACE_DEVICEA:
+    case CUPS_CSPACE_DEVICEB:
+    case CUPS_CSPACE_DEVICEC:
+    case CUPS_CSPACE_DEVICED:
+    case CUPS_CSPACE_DEVICEE:
+    case CUPS_CSPACE_DEVICEF:
+      white = 0;
+      break;
 
-      default :
-	  _cupsLangPrintFilter(stderr, "ERROR", _("Unsupported raster data."));
-	  fprintf(stderr, "DEBUG: Unsupported cupsColorSpace %d on page %d.\n",
-	          inheader.cupsColorSpace, page);
-	  return (1);
+    default:
+      _cupsLangPrintFilter(stderr, "ERROR", _("Unsupported raster data."));
+      fprintf(stderr, "DEBUG: Unsupported cupsColorSpace %d on page %d.\n",
+              inheader.cupsColorSpace, page);
+      return (1);
     }
 
     if (inheader.cupsColorOrder != CUPS_ORDER_CHUNKED)
@@ -189,12 +189,12 @@ main(int  argc,				/* I - Number of command-line args */
     }
 
     memcpy(&outheader, &inheader, sizeof(outheader));
-    outheader.cupsWidth        = page_width;
-    outheader.cupsHeight       = page_height;
+    outheader.cupsWidth = page_width;
+    outheader.cupsHeight = page_height;
     outheader.cupsBytesPerLine = linesize;
 
-    outheader.cupsInteger[14]  = 0;	/* VendorIdentifier */
-    outheader.cupsInteger[15]  = 0;	/* VendorLength */
+    outheader.cupsInteger[14] = 0; /* VendorIdentifier */
+    outheader.cupsInteger[15] = 0; /* VendorLength */
 
     if ((val = cupsGetOption("print-content-optimize", num_options,
                              options)) != NULL)
@@ -220,14 +220,14 @@ main(int  argc,				/* I - Number of command-line args */
 
     if ((val = cupsGetOption("print-quality", num_options, options)) != NULL)
     {
-      unsigned quality = (unsigned)atoi(val);		/* print-quality value */
+      unsigned quality = (unsigned)atoi(val); /* print-quality value */
 
       if (quality >= IPP_QUALITY_DRAFT && quality <= IPP_QUALITY_HIGH)
-	outheader.cupsInteger[8] = quality;
+        outheader.cupsInteger[8] = quality;
       else
       {
-	fprintf(stderr, "DEBUG: Unsupported print-quality %d.\n", quality);
-	outheader.cupsInteger[8] = 0;
+        fprintf(stderr, "DEBUG: Unsupported print-quality %d.\n", quality);
+        outheader.cupsInteger[8] = 0;
       }
     }
 
@@ -263,12 +263,12 @@ main(int  argc,				/* I - Number of command-line args */
         (pwg_size = _ppdCacheGetSize(cache, inheader.cupsPageSizeName)) != NULL)
     {
       strlcpy(outheader.cupsPageSizeName, pwg_size->map.pwg,
-	      sizeof(outheader.cupsPageSizeName));
+              sizeof(outheader.cupsPageSizeName));
     }
     else
     {
       pwg_media = pwgMediaForSize((int)(2540.0 * inheader.cupsPageSize[0] / 72.0),
-				  (int)(2540.0 * inheader.cupsPageSize[1] / 72.0));
+                                  (int)(2540.0 * inheader.cupsPageSize[1] / 72.0));
 
       if (pwg_media)
         strlcpy(outheader.cupsPageSizeName, pwg_media->pwg,
@@ -288,132 +288,132 @@ main(int  argc,				/* I - Number of command-line args */
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+          outheader.cupsInteger[1] = ~0U; /* CrossFeedTransform */
+          outheader.cupsInteger[2] = 1;   /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_width - page_left -
-	                             inheader.cupsWidth;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_width - page_left -
+                                     inheader.cupsWidth;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_top;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_width - page_left;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_bottom;
+          /* ImageBoxBottom */
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+          outheader.cupsInteger[1] = 1;   /* CrossFeedTransform */
+          outheader.cupsInteger[2] = ~0U; /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_left;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_bottom;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_top;
+          /* ImageBoxBottom */
         }
       }
       else if (_cups_strcasecmp(back->value, "ManualTumble"))
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+          outheader.cupsInteger[1] = ~0U; /* CrossFeedTransform */
+          outheader.cupsInteger[2] = ~0U; /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_width - page_left -
-	                             inheader.cupsWidth;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_width - page_left -
+                                     inheader.cupsWidth;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_bottom;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_width - page_left;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_top;
+          /* ImageBoxBottom */
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+          outheader.cupsInteger[1] = 1; /* CrossFeedTransform */
+          outheader.cupsInteger[2] = 1; /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_left;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_top;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_bottom;
+          /* ImageBoxBottom */
         }
       }
       else if (_cups_strcasecmp(back->value, "Rotated"))
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+          outheader.cupsInteger[1] = ~0U; /* CrossFeedTransform */
+          outheader.cupsInteger[2] = ~0U; /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_width - page_left -
-	                             inheader.cupsWidth;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_width - page_left -
+                                     inheader.cupsWidth;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_bottom;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_width - page_left;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_top;
+          /* ImageBoxBottom */
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+          outheader.cupsInteger[1] = 1; /* CrossFeedTransform */
+          outheader.cupsInteger[2] = 1; /* FeedTransform */
 
-	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
-	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
-	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
-	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+          outheader.cupsInteger[3] = page_left;
+          /* ImageBoxLeft */
+          outheader.cupsInteger[4] = page_top;
+          /* ImageBoxTop */
+          outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
+          /* ImageBoxRight */
+          outheader.cupsInteger[6] = page_height - page_bottom;
+          /* ImageBoxBottom */
         }
       }
       else
       {
-       /*
-        * Unsupported value...
-        */
+        /*
+         * Unsupported value...
+         */
 
         fputs("DEBUG: Unsupported cupsBackSide value.\n", stderr);
 
-	outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	outheader.cupsInteger[2] = 1;	/* FeedTransform */
+        outheader.cupsInteger[1] = 1; /* CrossFeedTransform */
+        outheader.cupsInteger[2] = 1; /* FeedTransform */
 
-	outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
-	outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
-	outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
-	outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+        outheader.cupsInteger[3] = page_left;
+        /* ImageBoxLeft */
+        outheader.cupsInteger[4] = page_top;
+        /* ImageBoxTop */
+        outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
+        /* ImageBoxRight */
+        outheader.cupsInteger[6] = page_height - page_bottom;
+        /* ImageBoxBottom */
       }
     }
     else
     {
-      outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-      outheader.cupsInteger[2] = 1;	/* FeedTransform */
+      outheader.cupsInteger[1] = 1; /* CrossFeedTransform */
+      outheader.cupsInteger[2] = 1; /* FeedTransform */
 
       outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+      /* ImageBoxLeft */
       outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+      /* ImageBoxTop */
       outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+      /* ImageBoxRight */
       outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+      /* ImageBoxBottom */
     }
 
     if (!cupsRasterWriteHeader2(outras, &outheader))
@@ -423,9 +423,9 @@ main(int  argc,				/* I - Number of command-line args */
       return (1);
     }
 
-   /*
-    * Copy raster data...
-    */
+    /*
+     * Copy raster data...
+     */
 
     if (linesize < inheader.cupsBytesPerLine)
       linesize = inheader.cupsBytesPerLine;
@@ -436,42 +436,42 @@ main(int  argc,				/* I - Number of command-line args */
     line = malloc(linesize);
 
     memset(line, white, linesize);
-    for (y = page_top; y > 0; y --)
+    for (y = page_top; y > 0; y--)
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
-	_cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
-	fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
-	        page_top - y + 1, page);
-	return (1);
+        _cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
+        fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
+                page_top - y + 1, page);
+        return (1);
       }
 
-    for (y = inheader.cupsHeight; y > 0; y --)
+    for (y = inheader.cupsHeight; y > 0; y--)
     {
       if (cupsRasterReadPixels(inras, line + lineoffset, inheader.cupsBytesPerLine) != inheader.cupsBytesPerLine)
       {
-	_cupsLangPrintFilter(stderr, "ERROR", _("Error reading raster data."));
-	fprintf(stderr, "DEBUG: Unable to read line %d for page %d.\n",
-	        inheader.cupsHeight - y + page_top + 1, page);
-	return (1);
+        _cupsLangPrintFilter(stderr, "ERROR", _("Error reading raster data."));
+        fprintf(stderr, "DEBUG: Unable to read line %d for page %d.\n",
+                inheader.cupsHeight - y + page_top + 1, page);
+        return (1);
       }
 
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
-	_cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
-	fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
-	        inheader.cupsHeight - y + page_top + 1, page);
-	return (1);
+        _cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
+        fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
+                inheader.cupsHeight - y + page_top + 1, page);
+        return (1);
       }
     }
 
     memset(line, white, linesize);
-    for (y = page_bottom; y > 0; y --)
+    for (y = page_bottom; y > 0; y--)
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
-	_cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
-	fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
-	        page_bottom - y + page_top + inheader.cupsHeight + 1, page);
-	return (1);
+        _cupsLangPrintFilter(stderr, "ERROR", _("Error sending raster data."));
+        fprintf(stderr, "DEBUG: Unable to write line %d for page %d.\n",
+                page_bottom - y + page_top + inheader.cupsHeight + 1, page);
+        return (1);
       }
 
     free(line);

@@ -14,44 +14,42 @@
 #include <cups/ppd.h>
 #include <cups/sidechannel.h>
 
-
 /*
  * Local functions...
  */
 
-static int	auto_configure(ppd_file_t *ppd, const char *user);
-static void	begin_ps(ppd_file_t *ppd, const char *user);
-static void	end_ps(ppd_file_t *ppd);
-static void	print_self_test_page(ppd_file_t *ppd, const char *user);
-static void	report_levels(ppd_file_t *ppd, const char *user);
-
+static int auto_configure(ppd_file_t *ppd, const char *user);
+static void begin_ps(ppd_file_t *ppd, const char *user);
+static void end_ps(ppd_file_t *ppd);
+static void print_self_test_page(ppd_file_t *ppd, const char *user);
+static void report_levels(ppd_file_t *ppd, const char *user);
 
 /*
  * 'main()' - Process a CUPS command file.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int		status = 0;		/* Exit status */
-  cups_file_t	*fp;			/* Command file */
-  char		line[1024],		/* Line from file */
-		*value;			/* Value on line */
-  int		linenum;		/* Line number in file */
-  ppd_file_t	*ppd;			/* PPD file */
+  int status = 0;  /* Exit status */
+  cups_file_t *fp; /* Command file */
+  char line[1024], /* Line from file */
+      *value;      /* Value on line */
+  int linenum;     /* Line number in file */
+  ppd_file_t *ppd; /* PPD file */
 
-
- /*
-  * Check for valid arguments...
-  */
+  /*
+   * Check for valid arguments...
+   */
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 
   if (argc < 6 || argc > 7)
   {
-   /*
-    * We don't have the correct number of arguments; write an error message
-    * and return.
-    */
+    /*
+     * We don't have the correct number of arguments; write an error message
+     * and return.
+     */
 
     _cupsLangPrintf(stderr,
                     _("Usage: %s job-id user title copies options [file]"),
@@ -59,9 +57,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (1);
   }
 
- /*
-  * Open the PPD file...
-  */
+  /*
+   * Open the PPD file...
+   */
 
   if ((ppd = ppdOpenFile(getenv("PPD"))) == NULL)
   {
@@ -69,9 +67,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (1);
   }
 
- /*
-  * Open the command file as needed...
-  */
+  /*
+   * Open the command file as needed...
+   */
 
   if (argc == 7)
   {
@@ -84,17 +82,17 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     fp = cupsFileStdin();
 
- /*
-  * Read the commands from the file and send the appropriate commands...
-  */
+  /*
+   * Read the commands from the file and send the appropriate commands...
+   */
 
   linenum = 0;
 
   while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
   {
-   /*
-    * Parse the command...
-    */
+    /*
+     * Parse the command...
+     */
 
     if (!_cups_strcasecmp(line, "AutoConfigure"))
       status |= auto_configure(ppd, argv[2]);
@@ -113,29 +111,28 @@ main(int  argc,				/* I - Number of command-line arguments */
   return (status);
 }
 
-
 /*
  * 'auto_configure()' - Automatically configure the printer using PostScript
  *                      query commands and/or SNMP lookups.
  */
 
-static int				/* O - Exit status */
-auto_configure(ppd_file_t *ppd,		/* I - PPD file */
-               const char *user)	/* I - Printing user */
+static int                       /* O - Exit status */
+auto_configure(ppd_file_t *ppd,  /* I - PPD file */
+               const char *user) /* I - Printing user */
 {
-  int		status = 0;		/* Exit status */
-  ppd_option_t	*option;		/* Current option in PPD */
-  ppd_attr_t	*attr;			/* Query command attribute */
-  const char	*valptr;		/* Pointer into attribute value */
-  char		buffer[1024],		/* String buffer */
-		*bufptr;		/* Pointer into buffer */
-  ssize_t	bytes;			/* Number of bytes read */
-  int		datalen;		/* Side-channel data length */
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+  int status = 0;       /* Exit status */
+  ppd_option_t *option; /* Current option in PPD */
+  ppd_attr_t *attr;     /* Query command attribute */
+  const char *valptr;   /* Pointer into attribute value */
+  char buffer[1024],    /* String buffer */
+      *bufptr;          /* Pointer into buffer */
+  ssize_t bytes;        /* Number of bytes read */
+  int datalen;          /* Side-channel data length */
 
-
- /*
-  * See if the backend supports bidirectional I/O...
-  */
+  /*
+   * See if the backend supports bidirectional I/O...
+   */
 
   datalen = 1;
   if (cupsSideChannelDoRequest(CUPS_SC_CMD_GET_BIDI, buffer, &datalen,
@@ -143,23 +140,24 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
       buffer[0] != CUPS_SC_BIDI_SUPPORTED)
   {
     fputs("DEBUG: Unable to auto-configure PostScript Printer - no "
-          "bidirectional I/O available!\n", stderr);
+          "bidirectional I/O available!\n",
+          stderr);
     return (1);
   }
 
- /*
-  * Put the printer in PostScript mode...
-  */
+  /*
+   * Put the printer in PostScript mode...
+   */
 
   begin_ps(ppd, user);
 
- /*
-  * (STR #4028)
-  *
-  * As a lot of PPDs contain bad PostScript query code, we need to prevent one
-  * bad query sequence from affecting all auto-configuration.  The following
-  * error handler allows us to log PostScript errors to cupsd.
-  */
+  /*
+   * (STR #4028)
+   *
+   * As a lot of PPDs contain bad PostScript query code, we need to prevent one
+   * bad query sequence from affecting all auto-configuration.  The following
+   * error handler allows us to log PostScript errors to cupsd.
+   */
 
   puts("/cups_handleerror {\n"
        "  $error /newerror false put\n"
@@ -173,30 +171,30 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
        "/cups_query_keyword (?Unknown) def\n");
   fflush(stdout);
 
- /*
-  * Wait for the printer to become connected...
-  */
+  /*
+   * Wait for the printer to become connected...
+   */
 
   do
   {
     sleep(1);
     datalen = 1;
-  }
-  while (cupsSideChannelDoRequest(CUPS_SC_CMD_GET_CONNECTED, buffer, &datalen,
-                                  5.0) == CUPS_SC_STATUS_OK && !buffer[0]);
+  } while (cupsSideChannelDoRequest(CUPS_SC_CMD_GET_CONNECTED, buffer, &datalen,
+                                    5.0) == CUPS_SC_STATUS_OK &&
+           !buffer[0]);
 
- /*
-  * Then loop through every option in the PPD file and ask for the current
-  * value...
-  */
+  /*
+   * Then loop through every option in the PPD file and ask for the current
+   * value...
+   */
 
   fputs("DEBUG: Auto-configuring PostScript printer...\n", stderr);
 
   for (option = ppdFirstOption(ppd); option; option = ppdNextOption(ppd))
   {
-   /*
-    * See if we have a query command for this option...
-    */
+    /*
+     * See if we have a query command for this option...
+     */
 
     snprintf(buffer, sizeof(buffer), "?%s", option->keyword);
 
@@ -206,17 +204,17 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
       continue;
     }
 
-   /*
-    * Send the query code to the printer...
-    */
+    /*
+     * Send the query code to the printer...
+     */
 
     fprintf(stderr, "DEBUG: Querying %s...\n", option->keyword);
 
-    for (bufptr = buffer, valptr = attr->value; *valptr; valptr ++)
+    for (bufptr = buffer, valptr = attr->value; *valptr; valptr++)
     {
-     /*
-      * Log the query code, breaking at newlines...
-      */
+      /*
+       * Log the query code, breaking at newlines...
+       */
 
       if (*valptr == '\n')
       {
@@ -228,9 +226,9 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
       {
         if (bufptr >= (buffer + sizeof(buffer) - 4))
         {
-	  *bufptr = '\0';
-	  fprintf(stderr, "DEBUG: %s\n", buffer);
-	  bufptr = buffer;
+          *bufptr = '\0';
+          fprintf(stderr, "DEBUG: %s\n", buffer);
+          bufptr = buffer;
         }
 
         if (*valptr == '\r')
@@ -255,12 +253,12 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
       {
         if (bufptr >= (buffer + sizeof(buffer) - 1))
         {
-	  *bufptr = '\0';
-	  fprintf(stderr, "DEBUG: %s\n", buffer);
-	  bufptr = buffer;
+          *bufptr = '\0';
+          fprintf(stderr, "DEBUG: %s\n", buffer);
+          bufptr = buffer;
         }
 
-	*bufptr++ = *valptr;
+        *bufptr++ = *valptr;
       }
     }
 
@@ -271,130 +269,131 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
     }
 
     printf("/cups_query_keyword (?%s) def\n", option->keyword);
-					/* Set keyword for error reporting */
+    /* Set keyword for error reporting */
     fputs("{ (", stdout);
-    for (valptr = attr->value; *valptr; valptr ++)
+    for (valptr = attr->value; *valptr; valptr++)
     {
       if (*valptr == '(' || *valptr == ')' || *valptr == '\\')
         putchar('\\');
       putchar(*valptr);
     }
     fputs(") cvx exec } stopped { cups_handleerror } if clear\n", stdout);
-    					/* Send query code */
+    /* Send query code */
     fflush(stdout);
 
     datalen = 0;
     cupsSideChannelDoRequest(CUPS_SC_CMD_DRAIN_OUTPUT, buffer, &datalen, 5.0);
 
-   /*
-    * Read the response data...
-    */
+    /*
+     * Read the response data...
+     */
 
-    bufptr    = buffer;
+    bufptr = buffer;
     buffer[0] = '\0';
     while ((bytes = cupsBackChannelRead(bufptr, sizeof(buffer) - (size_t)(bufptr - buffer) - 1, 10.0)) > 0)
     {
-     /*
-      * No newline at the end? Go on reading ...
-      */
+      /*
+       * No newline at the end? Go on reading ...
+       */
 
       bufptr += bytes;
       *bufptr = '\0';
 
       if (bytes == 0 ||
           (bufptr > buffer && bufptr[-1] != '\r' && bufptr[-1] != '\n'))
-	continue;
+        continue;
 
-     /*
-      * Trim whitespace and control characters from both ends...
-      */
+      /*
+       * Trim whitespace and control characters from both ends...
+       */
 
       bytes = bufptr - buffer;
 
-      for (bufptr --; bufptr >= buffer; bufptr --)
+      for (bufptr--; bufptr >= buffer; bufptr--)
         if (isspace(*bufptr & 255) || iscntrl(*bufptr & 255))
-	  *bufptr = '\0';
-	else
-	  break;
+          *bufptr = '\0';
+        else
+          break;
 
       for (bufptr = buffer; isspace(*bufptr & 255) || iscntrl(*bufptr & 255);
-	   bufptr ++);
+           bufptr++)
+        ;
 
       if (bufptr > buffer)
       {
         _cups_strcpy(buffer, bufptr);
-	bufptr = buffer;
+        bufptr = buffer;
       }
 
       fprintf(stderr, "DEBUG: Got %d bytes.\n", (int)bytes);
 
-     /*
-      * Skip blank lines...
-      */
+      /*
+       * Skip blank lines...
+       */
 
       if (!buffer[0])
         continue;
 
-     /*
-      * Check the response...
-      */
+      /*
+       * Check the response...
+       */
 
       if ((bufptr = strchr(buffer, ':')) != NULL)
       {
-       /*
-        * PostScript code for this option in the PPD is broken; show the
-        * interpreter's error message that came back...
-        */
+        /*
+         * PostScript code for this option in the PPD is broken; show the
+         * interpreter's error message that came back...
+         */
 
-	fprintf(stderr, "DEBUG%s\n", bufptr);
-	break;
+        fprintf(stderr, "DEBUG%s\n", bufptr);
+        break;
       }
 
-     /*
-      * Verify the result is a valid option choice...
-      */
+      /*
+       * Verify the result is a valid option choice...
+       */
 
       if (!ppdFindChoice(option, buffer))
       {
-	if (!strcasecmp(buffer, "Unknown"))
-	  break;
+        if (!strcasecmp(buffer, "Unknown"))
+          break;
 
-	bufptr    = buffer;
-	buffer[0] = '\0';
+        bufptr = buffer;
+        buffer[0] = '\0';
         continue;
       }
 
-     /*
-      * Write out the result and move on to the next option...
-      */
+      /*
+       * Write out the result and move on to the next option...
+       */
 
       fprintf(stderr, "PPD: Default%s=%s\n", option->keyword, buffer);
       break;
     }
 
-   /*
-    * Printer did not answer this option's query
-    */
+    /*
+     * Printer did not answer this option's query
+     */
 
     if (bytes <= 0)
     {
       fprintf(stderr,
-	      "DEBUG: No answer to query for option %s within 10 seconds.\n",
-	      option->keyword);
+              "DEBUG: No answer to query for option %s within 10 seconds.\n",
+              option->keyword);
       status = 1;
     }
   }
 
- /*
-  * Finish the job...
-  */
+  /*
+   * Finish the job...
+   */
 
   fflush(stdout);
   end_ps(ppd);
 
- /*
-  * Return...
-  */
+  /*
+   * Return...
+   */
 
   if (status)
     _cupsLangPrintFilter(stderr, "WARNING",
@@ -403,15 +402,15 @@ auto_configure(ppd_file_t *ppd,		/* I - PPD file */
   return (0);
 }
 
-
 /*
  * 'begin_ps()' - Send the standard PostScript prolog.
  */
 
 static void
-begin_ps(ppd_file_t *ppd,		/* I - PPD file */
-         const char *user)		/* I - Username */
+begin_ps(ppd_file_t *ppd,  /* I - PPD file */
+         const char *user) /* I - Username */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   (void)user;
 
   if (ppd->jcl_begin)
@@ -426,14 +425,14 @@ begin_ps(ppd_file_t *ppd,		/* I - PPD file */
   fflush(stdout);
 }
 
-
 /*
  * 'end_ps()' - Send the standard PostScript trailer.
  */
 
 static void
-end_ps(ppd_file_t *ppd)			/* I - PPD file */
+end_ps(ppd_file_t *ppd) /* I - PPD file */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   if (ppd->jcl_end)
     fputs(ppd->jcl_end, stdout);
   else
@@ -442,25 +441,25 @@ end_ps(ppd_file_t *ppd)			/* I - PPD file */
   fflush(stdout);
 }
 
-
 /*
  * 'print_self_test_page()' - Print a self-test page.
  */
 
 static void
-print_self_test_page(ppd_file_t *ppd,	/* I - PPD file */
-                     const char *user)	/* I - Printing user */
+print_self_test_page(ppd_file_t *ppd,  /* I - PPD file */
+                     const char *user) /* I - Printing user */
 {
- /*
-  * Put the printer in PostScript mode...
-  */
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+  /*
+   * Put the printer in PostScript mode...
+   */
 
   begin_ps(ppd, user);
 
- /*
-  * Send a simple file the draws a box around the imageable area and shows
-  * the product/interpreter information...
-  */
+  /*
+   * Send a simple file the draws a box around the imageable area and shows
+   * the product/interpreter information...
+   */
 
   puts("\r%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
        "%%%%%%%%%%%%%\n"
@@ -479,36 +478,36 @@ print_self_test_page(ppd_file_t *ppd,	/* I - PPD file */
        "0 -12 rmoveto gsave serialnumber 20 string cvs show grestore\n"
        "showpage");
 
- /*
-  * Finish the job...
-  */
+  /*
+   * Finish the job...
+   */
 
   end_ps(ppd);
 }
-
 
 /*
  * 'report_levels()' - Report supply levels.
  */
 
 static void
-report_levels(ppd_file_t *ppd,		/* I - PPD file */
-              const char *user)		/* I - Printing user */
+report_levels(ppd_file_t *ppd,  /* I - PPD file */
+              const char *user) /* I - Printing user */
 {
- /*
-  * Put the printer in PostScript mode...
-  */
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+  /*
+   * Put the printer in PostScript mode...
+   */
 
   begin_ps(ppd, user);
 
- /*
-  * Don't bother sending any additional PostScript commands, since we just
-  * want the backend to have enough time to collect the supply info.
-  */
+  /*
+   * Don't bother sending any additional PostScript commands, since we just
+   * want the backend to have enough time to collect the supply info.
+   */
 
- /*
-  * Finish the job...
-  */
+  /*
+   * Finish the job...
+   */
 
   end_ps(ppd);
 }

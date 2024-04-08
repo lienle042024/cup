@@ -69,7 +69,7 @@ main(int  argc,				/* I - Number of command-line arguments */
  /*
   * Copy the file to stdout...
   */
-
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   while (copies > 0)
   {
     if (!getenv("FINAL_CONTENT_TYPE"))

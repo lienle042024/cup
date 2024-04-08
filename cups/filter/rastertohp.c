@@ -57,6 +57,7 @@ void	OutputLine(cups_page_header2_t *header);
 void
 Setup(void)
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
  /*
   * Send a PCL reset sequence.
   */
@@ -76,7 +77,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 {
   unsigned	plane;			/* Looping var */
 
-
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
  /*
   * Show page device dictionary...
   */
@@ -350,6 +351,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 void
 EndPage(void)
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
  /*
   * Eject the current page...
   */
@@ -392,6 +394,7 @@ EndPage(void)
 void
 Shutdown(void)
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
  /*
   * Send a PCL reset sequence.
   */
@@ -408,6 +411,7 @@ Shutdown(void)
 void
 CancelJob(int sig)			/* I - Signal */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   (void)sig;
 
   Canceled = 1;
@@ -424,6 +428,7 @@ CompressData(unsigned char *line,	/* I - Data to compress */
 	     unsigned      plane,	/* I - Color plane */
 	     unsigned      type)	/* I - Type of compression */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   unsigned char	*line_ptr,		/* Current byte pointer */
         	*line_end,		/* End-of-line byte pointer */
         	*comp_ptr,		/* Pointer into compression buffer */
@@ -552,6 +557,8 @@ CompressData(unsigned char *line,	/* I - Data to compress */
 void
 OutputLine(cups_page_header2_t *header)	/* I - Page header */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
   unsigned	plane,			/* Current plane */
 		bytes,			/* Bytes to write */
 		count;			/* Bytes to convert */
@@ -646,6 +653,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
 
+printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
 
  /*
   * Make sure status messages are not buffered...

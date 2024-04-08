@@ -57,6 +57,8 @@ static int Canceled = 0;        /* Has the current job been canceled? */
 // MARK: - Misc  -
 static int rasterToPDFColorSpace( cups_cspace_t colorSpace, int bitsPerPixel, int *bitsPerComponent, char *cs, size_t csLen )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     switch (colorSpace)
     {
         case CUPS_CSPACE_W:
@@ -91,6 +93,7 @@ static void compressImageData(const unsigned char *inData,
                               unsigned char **outData,
                               size_t *outSize )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
     if (outData == NULL || outSize == NULL)
     {
         fprintf(stderr, "Invalid Parameters, Line:%d\n", __LINE__);
@@ -98,12 +101,12 @@ static void compressImageData(const unsigned char *inData,
     }
 #if DeflateData
     int err = ENOMEM;
-    
+
     *outSize = compressBound( (uLongf)inSize );
     *outData = (unsigned char *)malloc( *outSize );
-    
+
     if (*outData != NULL) err = compress( *outData, outSize, inData, inSize );
-    
+
     if (err != 0)
     {
         fprintf( stderr, "Failed to %s data, Line:%d\n", (*outData ? "compress" : "allocate"), __LINE__);
@@ -130,10 +133,12 @@ static long writeImageObject(FILE *pdfFile,
                              const unsigned char *rasterData,
                              size_t rasterDataSize )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     unsigned char *data = NULL;
     size_t size;
     long objectOffset = 0;
-    
+
     compressImageData( rasterData, rasterDataSize, &data, &size );
 
     fprintf(pdfFile, "\n%u 0 obj\n", imageReference );
@@ -167,11 +172,13 @@ static long writePageStream(FILE *pdfFile,
                             int height,
                             int pageNumber)
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = 0;
     char imageStream[64];
-    
+
     snprintf( imageStream, sizeof( imageStream ), "q %d 0 0 %d 0 0 cm /Im%u Do Q", width, height, pageNumber );
-    
+
     fprintf(pdfFile, "\n%u 0 obj\n", streamReference );
     objectOffset = ftell(pdfFile);
     fprintf(pdfFile, "<< /Length %zu >>\n"
@@ -190,6 +197,8 @@ static long writePageObject(FILE *pdfFile,
                             int width,
                             int height)
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = 0;
 
     fprintf(pdfFile, "\n%u 0 obj\n", pageReference );
@@ -209,6 +218,8 @@ static long writeResourceObject(FILE *pdfFile,
                                 unsigned int contentReference,
                                 unsigned int page )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = 0;
 
     fprintf(pdfFile, "\n%u 0 obj\n", rsrcReference );
@@ -220,6 +231,8 @@ static long writeResourceObject(FILE *pdfFile,
 
 static long writePagesObject( FILE *pdfFile, std::vector<unsigned int> pages )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = 0;
 
     fprintf(pdfFile, "\n2 0 obj\n");
@@ -236,6 +249,8 @@ static long writePagesObject( FILE *pdfFile, std::vector<unsigned int> pages )
 
 static long writeCatalogObject( FILE *pdfFile, unsigned int objectReference )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = 0;
 
     fprintf(pdfFile, "\n%u 0 obj\n", objectReference);
@@ -251,6 +266,8 @@ static void writeTrailerObject(FILE *pdfFile,
                                unsigned long numObjects,
                                long startXOffset)
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     fprintf( pdfFile, "trailer\n"
                        "<< /Root %u 0 R\n"
                        "   /Size %lu >>\n"
@@ -261,6 +278,8 @@ static void writeTrailerObject(FILE *pdfFile,
 
 static long writeXRefTable( FILE *pdfFile, std::vector<long> offsets, long startOffset )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     long objectOffset = ftell(pdfFile);
     fprintf( pdfFile, "xref\n"
                       "0 %lu\n"
@@ -274,6 +293,8 @@ static long writeXRefTable( FILE *pdfFile, std::vector<long> offsets, long start
 
 static long writeHeader( FILE *pdfFile )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     fprintf(pdfFile, "%%PDF-1.3\n");
 
     return ftell(pdfFile);
@@ -282,12 +303,14 @@ static long writeHeader( FILE *pdfFile )
 // MARK: - Work -
 static int convertCUPSRasterToPDF( int rasterIn )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
     #define kInitialImageReferenceID 10
     int err = 0;
     int pages = 0;
     unsigned int objectReference = kInitialImageReferenceID;
     unsigned int catalogReference = objectReference++;
-    
+
     long startOffset;
     long offset;
 
@@ -345,7 +368,7 @@ static int convertCUPSRasterToPDF( int rasterIn )
             err = -1;
             break;
         }
-        
+
         size_t result = (size_t) cupsRasterReadPixels(rasterFile, rasterData, (unsigned int)imageSize);
         if (result != imageSize)
         {
@@ -363,7 +386,7 @@ static int convertCUPSRasterToPDF( int rasterIn )
         unsigned int streamReference = objectReference++;
         unsigned int imageReference = objectReference++;
         int interpolate = 0;
-        
+
         offset = writePageStream(pdfFile, streamReference, width, height, pages+1 );
         objectOffsets.push_back( offset );
 
@@ -414,6 +437,8 @@ bail:
 
 static void sigterm_handler(int sig)
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
   (void)sig;
 
   Canceled = 1;
@@ -421,15 +446,16 @@ static void sigterm_handler(int sig)
 
 static void installSignalHandler( void )
 {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
 #ifdef HAVE_SIGSET
     sigset(SIGTERM, sigterm_handler);
 #elif defined(HAVE_SIGACTION)
     struct sigaction action;        /* Actions for POSIX signals */
     memset(&action, 0, sizeof(action));
-    
+
     sigemptyset(&action.sa_mask);
     sigaddset(&action.sa_mask, SIGTERM);
-    
+
     action.sa_handler = sigterm_handler;
     sigaction(SIGTERM, &action, NULL);
 #else

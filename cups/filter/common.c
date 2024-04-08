@@ -41,6 +41,8 @@ SetCommonOptions(
     cups_option_t *options,		/* I - Options */
     int           change_size)		/* I - Change page size? */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
+
   ppd_file_t	*ppd;			/* PPD file */
   ppd_size_t	*pagesize;		/* Current page size */
   const char	*val;			/* Option value */
@@ -201,6 +203,7 @@ SetCommonOptions(
 void
 UpdatePageVars(void)
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   float		temp;			/* Swapping variable */
 
 
@@ -265,6 +268,7 @@ UpdatePageVars(void)
 void
 WriteCommon(void)
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   puts("% x y w h ESPrc - Clip to a rectangle.\n"
        "userdict/ESPrc/rectclip where{pop/rectclip load}\n"
        "{{newpath 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
@@ -291,6 +295,7 @@ WriteLabelProlog(const char *label,	/* I - Page label */
 		 float      top,	/* I - Top position in points */
 		 float      width)	/* I - Width in points */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   const char	*classification;	/* CLASSIFICATION environment variable */
   const char	*ptr;			/* Temporary string pointer */
 
@@ -350,6 +355,7 @@ WriteLabelProlog(const char *label,	/* I - Page label */
 
   if (label)
   {
+    printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
     if (classification[0])
       printf(" - ");
 
@@ -405,6 +411,7 @@ WriteLabelProlog(const char *label,	/* I - Page label */
 void
 WriteLabels(int orient)	/* I - Orientation of the page */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   float	width,		/* Width of page */
 	length;		/* Length of page */
 
@@ -448,6 +455,7 @@ void
 WriteTextComment(const char *name,	/* I - Comment name ("Title", etc.) */
                  const char *value)	/* I - Comment value */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n",__FILE__, __LINE__, __FUNCTION__);
   int	len;				/* Current line length */
 
 
