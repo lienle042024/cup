@@ -47,7 +47,10 @@ int main(int argc,	   /* I - Number of command-line arguments */
 	int silent;				 /* Silent or verbose output? */
 	char buffer[8192];		 /* Copy buffer */
 
+printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+
 #ifdef __sun
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	/*
 	 * Solaris does some rather strange things to re-queue remote print
 	 * jobs.  On bootup, the "lp" command is run as "printd" to re-spool
@@ -64,9 +67,9 @@ int main(int argc,	   /* I - Number of command-line arguments */
 	if (!strcmp(val, "printd"))
 		return (0);
 #endif /* __sun */
-
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	_cupsSetLocale(argv);
-
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	silent = 0;
 	printer = NULL;
 	dest = NULL;
@@ -80,14 +83,19 @@ int main(int argc,	   /* I - Number of command-line arguments */
 	for (i = 1; i < argc; i++)
 	{
 		if (!strcmp(argv[i], "--help"))
+		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			usage();
+		}
 		else if (argv[i][0] == '-' && argv[i][1] && !end_options)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			for (opt = argv[i] + 1; *opt; opt++)
 			{
 				switch (*opt)
 				{
 				case 'E': /* Encrypt */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 #ifdef HAVE_SSL
 					cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
 #else
@@ -96,6 +104,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'U': /* Username */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						cupsSetUser(opt + 1);
@@ -115,9 +124,11 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'c': /* Copy to spool dir (always enabled) */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					break;
 
 				case 'd': /* Destination printer or class */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						printer = opt + 1;
@@ -167,6 +178,8 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'f': /* Form */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+
 					if (opt[1] != '\0')
 					{
 						opt += strlen(opt) - 1;
@@ -181,11 +194,12 @@ int main(int argc,	   /* I - Number of command-line arguments */
 							usage();
 						}
 					}
-
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					_cupsLangPrintf(stderr, _("%s: Warning - form option ignored."), argv[0]);
 					break;
 
 				case 'h': /* Destination host */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						cupsSetServer(opt + 1);
@@ -206,6 +220,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'i': /* Change job */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						val = opt + 1;
@@ -243,11 +258,13 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'm': /* Send email when job is done */
+				printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 #ifdef __sun
 				case 'p': /* Notify on completion */
 #endif					  /* __sun */
 				case 'w': /* Write to console or email */
 				{
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					char email[1024]; /* EMail address */
 
 					snprintf(email, sizeof(email), "mailto:%s@%s", cupsUser(), httpGetHostname(NULL, buffer, sizeof(buffer)));
@@ -258,6 +275,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'n': /* Number of copies */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						num_copies = atoi(opt + 1);
@@ -286,6 +304,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'o': /* Option */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						num_options = cupsParseOptions(opt + 1, num_options, &options);
@@ -309,6 +328,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 				case 'p': /* Queue priority */
 #endif					  /* !__sun */
 				case 'q': /* Queue priority */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						priority = atoi(opt + 1);
@@ -346,10 +366,12 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 's': /* Silent */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					silent = 1;
 					break;
 
 				case 't': /* Title */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						title = opt + 1;
@@ -370,6 +392,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'y': /* mode-list */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						opt += strlen(opt) - 1;
@@ -389,6 +412,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'H': /* Hold job */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						val = opt + 1;
@@ -432,6 +456,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'P': /* Page list */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						val = opt + 1;
@@ -454,6 +479,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'S': /* character set */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						opt += strlen(opt) - 1;
@@ -473,6 +499,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case 'T': /* Content-Type */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						opt += strlen(opt) - 1;
@@ -492,6 +519,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 					break;
 
 				case '-': /* Stop processing options */
+					printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 					if (opt[1] != '\0')
 					{
 						_cupsLangPrintf(stderr, _("%s: Error - unknown option \"%s\"."), argv[0], argv[i]);
@@ -509,6 +537,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 		}
 		else if (!strcmp(argv[i], "-"))
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			if (num_files || job_id)
 			{
 				_cupsLangPrintf(stderr,
@@ -522,6 +551,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 		}
 		else if (num_files < 1000 && job_id == 0)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			/*
 			 * Print a file...
 			 */
@@ -545,6 +575,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 		}
 		else
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			_cupsLangPrintf(stderr, _("%s: Error - too many files - \"%s\"."), argv[0], argv[i]);
 		}
 	}
@@ -554,16 +585,21 @@ int main(int argc,	   /* I - Number of command-line arguments */
 	 */
 
 	if (job_id)
+	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		return (set_job_attrs(argv[0], job_id, num_options, options));
+	}
 
 	/*
 	 * See if we have any files to print; if not, print from stdin...
 	 */
-
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	if (printer == NULL)
 	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		if ((dest = cupsGetNamedDest(NULL, NULL, NULL)) != NULL)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			printer = dest->name;
 
 			for (j = 0; j < dest->num_options; j++)
@@ -575,6 +611,7 @@ int main(int argc,	   /* I - Number of command-line arguments */
 		else if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
 				 cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			_cupsLangPrintf(stderr,
 							_("%s: Error - add '/version=1.1' to server "
 							  "name."),
@@ -583,22 +620,30 @@ int main(int argc,	   /* I - Number of command-line arguments */
 		}
 	}
 
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	if (printer == NULL)
 	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		if (!cupsGetNamedDest(NULL, NULL, NULL) && cupsLastError() == IPP_STATUS_ERROR_NOT_FOUND)
 			_cupsLangPrintf(stderr, _("%s: Error - %s"), argv[0], cupsLastErrorString());
 		else
 			_cupsLangPrintf(stderr, _("%s: Error - scheduler not responding."), argv[0]);
 
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		return (1);
 	}
 
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	if (num_files > 0)
+	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		job_id = cupsPrintFiles(printer, num_files, files, title, num_options, options);
+	}
 	else if ((job_id = cupsCreateJob(CUPS_HTTP_DEFAULT, printer,
 									 title ? title : "(stdin)",
 									 num_options, options)) > 0)
 	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		http_status_t status; /* Write status */
 		const char *format;	  /* Document format */
 		ssize_t bytes;		  /* Bytes read */
@@ -609,15 +654,20 @@ int main(int argc,	   /* I - Number of command-line arguments */
 										 options)) == NULL)
 			format = CUPS_FORMAT_AUTO;
 
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		status = cupsStartDocument(CUPS_HTTP_DEFAULT, printer, job_id, NULL,
 								   format, 1);
 
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		while (status == HTTP_CONTINUE &&
 			   (bytes = read(0, buffer, sizeof(buffer))) > 0)
 			status = cupsWriteRequestData(CUPS_HTTP_DEFAULT, buffer, (size_t)bytes);
 
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		if (status != HTTP_CONTINUE)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
+
 			_cupsLangPrintf(stderr, _("%s: Error - unable to queue from stdin - %s."),
 							argv[0], httpStatus(status));
 			cupsFinishDocument(CUPS_HTTP_DEFAULT, printer);
@@ -625,16 +675,19 @@ int main(int argc,	   /* I - Number of command-line arguments */
 			return (1);
 		}
 
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		if (cupsFinishDocument(CUPS_HTTP_DEFAULT, printer) != IPP_OK)
 		{
+			printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 			_cupsLangPrintf(stderr, "%s: %s", argv[0], cupsLastErrorString());
 			cupsCancelJob2(CUPS_HTTP_DEFAULT, printer, job_id, 0);
 			return (1);
 		}
 	}
-
+	printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 	if (job_id < 1)
 	{
+		printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 		_cupsLangPrintf(stderr, "%s: %s", argv[0], cupsLastErrorString());
 		return (1);
 	}

@@ -241,6 +241,7 @@ _cupsLangPuts(FILE *fp,            /* I - File to write to */
 
 void _cupsSetLocale(char *argv[]) /* IO - Command-line arguments */
 {
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   int i;               /* Looping var */
   char buffer[8192];   /* Command-line argument buffer */
   _cups_globals_t *cg; /* Global data */
@@ -258,9 +259,9 @@ void _cupsSetLocale(char *argv[]) /* IO - Command-line arguments */
    * to set LC_TIME to the locale name with .UTF-8 on the end (if
    * the locale includes a character set specifier...)
    */
-
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   setlocale(LC_ALL, "");
-
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 #ifdef LC_TIME
   if ((lc_time = setlocale(LC_TIME, NULL)) == NULL)
     lc_time = setlocale(LC_ALL, NULL);
@@ -282,11 +283,13 @@ void _cupsSetLocale(char *argv[]) /* IO - Command-line arguments */
   /*
    * Initialize the default language info...
    */
-
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   cg = _cupsGlobals();
 
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
   if (!cg->lang_default)
     cg->lang_default = cupsLangDefault();
+  printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
 
   /*
    * Transcode the command-line arguments from the locale charset to
@@ -301,7 +304,7 @@ void _cupsSetLocale(char *argv[]) /* IO - Command-line arguments */
       /*
        * Try converting from the locale charset to UTF-8...
        */
-
+      printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
       if (cupsCharsetToUTF8((cups_utf8_t *)buffer, argv[i], sizeof(buffer),
                             cg->lang_default->encoding) < 0)
         continue;
@@ -309,7 +312,7 @@ void _cupsSetLocale(char *argv[]) /* IO - Command-line arguments */
       /*
        * Save the new string if it differs from the original...
        */
-
+      printf("Lien => File[%s] Line[%d] Function[%s]\n", __FILE__, __LINE__, __FUNCTION__);
       if (strcmp(buffer, argv[i]))
         argv[i] = strdup(buffer);
     }
