@@ -13,62 +13,58 @@
 
 #include "ippevecommon.h"
 #if !CUPS_LITE
-#  include <cups/ppd-private.h>
+#include <cups/ppd-private.h>
 #endif /* !CUPS_LITE */
 #include <limits.h>
 #include <sys/wait.h>
 
 #ifdef __APPLE__
-#  define PDFTOPS CUPS_SERVERBIN "/filter/cgpdftops"
+#define PDFTOPS CUPS_SERVERBIN "/filter/cgpdftops"
 #else
-#  define PDFTOPS CUPS_SERVERBIN "/filter/pdftops"
+#define PDFTOPS CUPS_SERVERBIN "/filter/pdftops"
 #endif /* __APPLE__ */
-
 
 /*
  * Local globals...
  */
 
 #if !CUPS_LITE
-static ppd_file_t	*ppd = NULL;	/* PPD file data */
-static _ppd_cache_t	*ppd_cache = NULL;
-					/* IPP to PPD cache data */
+static ppd_file_t *ppd = NULL; /* PPD file data */
+static _ppd_cache_t *ppd_cache = NULL;
+/* IPP to PPD cache data */
 #endif /* !CUPS_LITE */
-
 
 /*
  * Local functions...
  */
 
-static void	ascii85(const unsigned char *data, int length, int eod);
-static void	dsc_header(int num_pages);
-static void	dsc_page(int page);
-static void	dsc_trailer(int num_pages);
-static int	get_options(cups_option_t **options);
-static int	jpeg_to_ps(const char *filename, int copies);
-static int	pdf_to_ps(const char *filename, int copies, int num_options, cups_option_t *options);
-static int	ps_to_ps(const char *filename, int copies);
-static int	raster_to_ps(const char *filename);
-
+static void ascii85(const unsigned char *data, int length, int eod);
+static void dsc_header(int num_pages);
+static void dsc_page(int page);
+static void dsc_trailer(int num_pages);
+static int get_options(cups_option_t **options);
+static int jpeg_to_ps(const char *filename, int copies);
+static int pdf_to_ps(const char *filename, int copies, int num_options, cups_option_t *options);
+static int ps_to_ps(const char *filename, int copies);
+static int raster_to_ps(const char *filename);
 
 /*
  * 'main()' - Main entry for PostScript printer command.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  const char	*content_type,		/* Content type to print */
-		*ipp_copies;		/* IPP_COPIES value */
-  int		copies;			/* Number of copies */
-  int		num_options;		/* Number of options */
-  cups_option_t	*options;		/* Options */
+  const char *content_type, /* Content type to print */
+      *ipp_copies;          /* IPP_COPIES value */
+  int copies;               /* Number of copies */
+  int num_options;          /* Number of options */
+  cups_option_t *options;   /* Options */
 
-
- /*
-  * Get print options...
-  */
+  /*
+   * Get print options...
+   */
 
   num_options = get_options(&options);
   if ((ipp_copies = getenv("IPP_COPIES")) != NULL)
@@ -76,9 +72,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     copies = 1;
 
- /*
-  * Print it...
-  */
+  /*
+   * Print it...
+   */
 
   if (argc > 2)
   {
@@ -113,22 +109,20 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 }
 
-
 /*
  * 'ascii85()' - Write binary data using a Base85 encoding...
  */
 
 static void
-ascii85(const unsigned char *data,	/* I - Data to write */
-        int                 length,	/* I - Number of bytes to write */
-        int                 eod)	/* I - 1 if this is the end, 0 otherwise */
+ascii85(const unsigned char *data, /* I - Data to write */
+        int length,                /* I - Number of bytes to write */
+        int eod)                   /* I - 1 if this is the end, 0 otherwise */
 {
-  unsigned	b = 0;			/* Current 32-bit word */
-  unsigned char	c[5];			/* Base-85 encoded characters */
-  static int	col = 0;		/* Column */
-  static unsigned char leftdata[4];	/* Leftover data at the end */
-  static int	leftcount = 0;		/* Size of leftover data */
-
+  unsigned b = 0;                   /* Current 32-bit word */
+  unsigned char c[5];               /* Base-85 encoded characters */
+  static int col = 0;               /* Column */
+  static unsigned char leftdata[4]; /* Leftover data at the end */
+  static int leftcount = 0;         /* Size of leftover data */
 
   length += leftcount;
 
@@ -136,18 +130,18 @@ ascii85(const unsigned char *data,	/* I - Data to write */
   {
     switch (leftcount)
     {
-      case 0 :
-          b = (unsigned)((((((data[0] << 8) | data[1]) << 8) | data[2]) << 8) | data[3]);
-	  break;
-      case 1 :
-          b = (unsigned)((((((leftdata[0] << 8) | data[0]) << 8) | data[1]) << 8) | data[2]);
-	  break;
-      case 2 :
-          b = (unsigned)((((((leftdata[0] << 8) | leftdata[1]) << 8) | data[0]) << 8) | data[1]);
-	  break;
-      case 3 :
-          b = (unsigned)((((((leftdata[0] << 8) | leftdata[1]) << 8) | leftdata[2]) << 8) | data[0]);
-	  break;
+    case 0:
+      b = (unsigned)((((((data[0] << 8) | data[1]) << 8) | data[2]) << 8) | data[3]);
+      break;
+    case 1:
+      b = (unsigned)((((((leftdata[0] << 8) | data[0]) << 8) | data[1]) << 8) | data[2]);
+      break;
+    case 2:
+      b = (unsigned)((((((leftdata[0] << 8) | leftdata[1]) << 8) | data[0]) << 8) | data[1]);
+      break;
+    case 3:
+      b = (unsigned)((((((leftdata[0] << 8) | leftdata[1]) << 8) | leftdata[2]) << 8) | data[0]);
+      break;
     }
 
     if (col >= 76)
@@ -159,7 +153,7 @@ ascii85(const unsigned char *data,	/* I - Data to write */
     if (b == 0)
     {
       putchar('z');
-      col ++;
+      col++;
     }
     else
     {
@@ -177,8 +171,8 @@ ascii85(const unsigned char *data,	/* I - Data to write */
       col += 5;
     }
 
-    data      += 4 - leftcount;
-    length    -= 4 - leftcount;
+    data += 4 - leftcount;
+    length -= 4 - leftcount;
     leftcount = 0;
   }
 
@@ -227,22 +221,20 @@ ascii85(const unsigned char *data,	/* I - Data to write */
   }
 }
 
-
 /*
  * 'dsc_header()' - Write out a standard Document Structuring Conventions
  *                  PostScript header.
  */
 
 static void
-dsc_header(int num_pages)		/* I - Number of pages or 0 if not known */
+dsc_header(int num_pages) /* I - Number of pages or 0 if not known */
 {
-  const char	*job_name = getenv("IPP_JOB_NAME");
-					/* job-name value */
-
+  const char *job_name = getenv("IPP_JOB_NAME");
+  /* job-name value */
 
 #if !CUPS_LITE
-  const char	*job_id = getenv("IPP_JOB_ID");
-					/* job-id value */
+  const char *job_id = getenv("IPP_JOB_ID");
+  /* job-id value */
 
   ppdEmitJCL(ppd, stdout, job_id ? atoi(job_id) : 0, cupsUser(), job_name ? job_name : "Unknown");
 #endif /* !CUPS_LITE */
@@ -260,7 +252,7 @@ dsc_header(int num_pages)		/* I - Number of pages or 0 if not known */
       else
         putchar('?');
 
-      job_name ++;
+      job_name++;
     }
     putchar('\n');
   }
@@ -291,13 +283,12 @@ dsc_header(int num_pages)		/* I - Number of pages or 0 if not known */
 #endif /* !CUPS_LITE */
 }
 
-
 /*
  * 'dsc_page()' - Mark the start of a page.
  */
 
 static void
-dsc_page(int page)			/* I - Page numebr (1-based) */
+dsc_page(int page) /* I - Page numebr (1-based) */
 {
   printf("%%%%Page: (%d) %d\n", page, page);
 
@@ -313,13 +304,12 @@ dsc_page(int page)			/* I - Page numebr (1-based) */
 #endif /* !CUPS_LITE */
 }
 
-
 /*
  * 'dsc_trailer()' - Mark the end of the document.
  */
 
 static void
-dsc_trailer(int num_pages)		/* I - Number of pages */
+dsc_trailer(int num_pages) /* I - Number of pages */
 {
   if (num_pages > 0)
   {
@@ -336,34 +326,32 @@ dsc_trailer(int num_pages)		/* I - Number of pages */
     putchar(0x04);
 }
 
-
 /*
  * 'get_options()' - Get the PPD options corresponding to the IPP Job Template
  *                   attributes.
  */
 
-static int				/* O - Number of options */
-get_options(cups_option_t **options)	/* O - Options */
+static int                           /* O - Number of options */
+get_options(cups_option_t **options) /* O - Options */
 {
-  int		num_options = 0;	/* Number of options */
-  const char	*value;			/* Option value */
-  pwg_media_t	*media = NULL;		/* Media mapping */
-  int		num_media_col = 0;	/* Number of media-col values */
-  cups_option_t	*media_col = NULL;	/* media-col values */
+  int num_options = 0;             /* Number of options */
+  const char *value;               /* Option value */
+  pwg_media_t *media = NULL;       /* Media mapping */
+  int num_media_col = 0;           /* Number of media-col values */
+  cups_option_t *media_col = NULL; /* media-col values */
 #if !CUPS_LITE
-  const char	*choice;		/* PPD choice */
-#endif /* !CUPS_LITE */
+  const char *choice; /* PPD choice */
+#endif                /* !CUPS_LITE */
 
-
- /*
-  * No options to start...
-  */
+  /*
+   * No options to start...
+   */
 
   *options = NULL;
 
- /*
-  * Media...
-  */
+  /*
+   * Media...
+   */
 
   if ((value = getenv("IPP_MEDIA")) == NULL)
     if ((value = getenv("IPP_MEDIA_COL")) == NULL)
@@ -374,17 +362,17 @@ get_options(cups_option_t **options)	/* O - Options */
   {
     if (*value == '{')
     {
-     /*
-      * media-col value...
-      */
+      /*
+       * media-col value...
+       */
 
       num_media_col = cupsParseOptions(value, 0, &media_col);
     }
     else
     {
-     /*
-      * media value - map to media-col.media-size-name...
-      */
+      /*
+       * media value - map to media-col.media-size-name...
+       */
 
       num_media_col = cupsAddOption("media-size-name", value, 0, &media_col);
     }
@@ -396,10 +384,10 @@ get_options(cups_option_t **options)	/* O - Options */
   }
   else if ((value = cupsGetOption("media-size", num_media_col, media_col)) != NULL)
   {
-    int		num_media_size;		/* Number of media-size values */
-    cups_option_t *media_size;		/* media-size values */
-    const char	*x_dimension,		/* x-dimension value */
-		*y_dimension;		/* y-dimension value */
+    int num_media_size;        /* Number of media-size values */
+    cups_option_t *media_size; /* media-size values */
+    const char *x_dimension,   /* x-dimension value */
+        *y_dimension;          /* y-dimension value */
 
     num_media_size = cupsParseOptions(value, 0, &media_size);
 
@@ -413,9 +401,9 @@ get_options(cups_option_t **options)	/* O - Options */
     num_options = cupsAddOption("PageSize", media->ppd, num_options, options);
 
 #if !CUPS_LITE
- /*
-  * Load PPD file and the corresponding IPP <-> PPD cache data...
-  */
+  /*
+   * Load PPD file and the corresponding IPP <-> PPD cache data...
+   */
 
   if ((ppd = ppdOpenFile(getenv("PPD"))) != NULL)
   {
@@ -427,28 +415,28 @@ get_options(cups_option_t **options)	/* O - Options */
 
     if (value)
     {
-      char	*ptr;			/* Pointer into value */
-      int	fin;			/* Current value */
+      char *ptr; /* Pointer into value */
+      int fin;   /* Current value */
 
       for (fin = strtol(value, &ptr, 10); fin > 0; fin = strtol(ptr + 1, &ptr, 10))
       {
-	num_options = _ppdCacheGetFinishingOptions(ppd_cache, NULL, (ipp_finishings_t)fin, num_options, options);
+        num_options = _ppdCacheGetFinishingOptions(ppd_cache, NULL, (ipp_finishings_t)fin, num_options, options);
 
-	if (*ptr != ',')
-	  break;
+        if (*ptr != ',')
+          break;
       }
     }
 
     if ((value = cupsGetOption("media-source", num_media_col, media_col)) != NULL)
     {
       if ((choice = _ppdCacheGetInputSlot(ppd_cache, NULL, value)) != NULL)
-	num_options = cupsAddOption("InputSlot", choice, num_options, options);
+        num_options = cupsAddOption("InputSlot", choice, num_options, options);
     }
 
     if ((value = cupsGetOption("media-type", num_media_col, media_col)) != NULL)
     {
       if ((choice = _ppdCacheGetMediaType(ppd_cache, NULL, value)) != NULL)
-	num_options = cupsAddOption("MediaType", choice, num_options, options);
+        num_options = cupsAddOption("MediaType", choice, num_options, options);
     }
 
     if ((value = getenv("IPP_OUTPUT_BIN")) == NULL)
@@ -457,7 +445,7 @@ get_options(cups_option_t **options)	/* O - Options */
     if (value)
     {
       if ((choice = _ppdCacheGetOutputBin(ppd_cache, value)) != NULL)
-	num_options = cupsAddOption("OutputBin", choice, num_options, options);
+        num_options = cupsAddOption("OutputBin", choice, num_options, options);
     }
 
     if ((value = getenv("IPP_SIDES")) == NULL)
@@ -466,11 +454,11 @@ get_options(cups_option_t **options)	/* O - Options */
     if (value && ppd_cache->sides_option)
     {
       if (!strcmp(value, "one-sided") && ppd_cache->sides_1sided)
-	num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_1sided, num_options, options);
+        num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_1sided, num_options, options);
       else if (!strcmp(value, "two-sided-long-edge") && ppd_cache->sides_2sided_long)
-	num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_2sided_long, num_options, options);
+        num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_2sided_long, num_options, options);
       else if (!strcmp(value, "two-sided-short-edge") && ppd_cache->sides_2sided_short)
-	num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_2sided_short, num_options, options);
+        num_options = cupsAddOption(ppd_cache->sides_option, ppd_cache->sides_2sided_short, num_options, options);
     }
 
     if ((value = getenv("IPP_PRINT_QUALITY")) == NULL)
@@ -478,11 +466,11 @@ get_options(cups_option_t **options)	/* O - Options */
 
     if (value)
     {
-      int		i;		/* Looping var */
-      int		pq;		/* Print quality (0-2) */
-      int		pcm = 1;	/* Print color model (0 = mono, 1 = color) */
-      int		num_presets;	/* Number of presets */
-      cups_option_t	*presets;	/* Presets */
+      int i;                  /* Looping var */
+      int pq;                 /* Print quality (0-2) */
+      int pcm = 1;            /* Print color model (0 = mono, 1 = color) */
+      int num_presets;        /* Number of presets */
+      cups_option_t *presets; /* Presets */
 
       if (!strcmp(value, "draft"))
         pq = 0;
@@ -492,21 +480,21 @@ get_options(cups_option_t **options)	/* O - Options */
         pq = 1;
 
       if ((value = getenv("IPP_PRINT_COLOR_MODE")) == NULL)
-	value = getenv("IPP_PRINT_COLOR_MODE_DEFAULT");
+        value = getenv("IPP_PRINT_COLOR_MODE_DEFAULT");
 
       if (value && !strcmp(value, "monochrome"))
-	pcm = 0;
+        pcm = 0;
 
       num_presets = ppd_cache->num_presets[pcm][pq];
-      presets     = ppd_cache->presets[pcm][pq];
+      presets = ppd_cache->presets[pcm][pq];
 
-      for (i = 0; i < num_presets; i ++)
-	num_options = cupsAddOption(presets[i].name, presets[i].value, num_options, options);
+      for (i = 0; i < num_presets; i++)
+        num_options = cupsAddOption(presets[i].name, presets[i].value, num_options, options);
     }
 
-   /*
-    * Mark the PPD with the options...
-    */
+    /*
+     * Mark the PPD with the options...
+     */
 
     ppdMarkDefaults(ppd);
     cupsMarkOptions(ppd, num_options, *options);
@@ -518,41 +506,39 @@ get_options(cups_option_t **options)	/* O - Options */
   return (num_options);
 }
 
-
 /*
  * 'jpeg_to_ps()' - Convert a JPEG file to PostScript.
  */
 
-static int				/* O - Exit status */
-jpeg_to_ps(const char    *filename,	/* I - Filename */
-           int           copies)	/* I - Number of copies */
+static int                       /* O - Exit status */
+jpeg_to_ps(const char *filename, /* I - Filename */
+           int copies)           /* I - Number of copies */
 {
-  int		fd;			/* JPEG file descriptor */
-  int		copy;			/* Current copy */
-  int		width = 0,		/* Width */
-		height = 0,		/* Height */
-		depth = 0,		/* Number of colors */
-		length;			/* Length of marker */
-  unsigned char	buffer[65536],		/* Copy buffer */
-		*bufptr,		/* Pointer info buffer */
-		*bufend;		/* End of buffer */
-  ssize_t	bytes;			/* Bytes in buffer */
-  const char	*decode;		/* Decode array */
-  float		page_left,		/* Left margin */
-		page_top,		/* Top margin */
-		page_width,		/* Page width in points */
-		page_height,		/* Page heigth in points */
-		x_factor,		/* X image scaling factor */
-		y_factor,		/* Y image scaling factor */
-		page_scaling;		/* Image scaling factor */
+  int fd;                      /* JPEG file descriptor */
+  int copy;                    /* Current copy */
+  int width = 0,               /* Width */
+      height = 0,              /* Height */
+      depth = 0,               /* Number of colors */
+      length;                  /* Length of marker */
+  unsigned char buffer[65536], /* Copy buffer */
+      *bufptr,                 /* Pointer info buffer */
+      *bufend;                 /* End of buffer */
+  ssize_t bytes;               /* Bytes in buffer */
+  const char *decode;          /* Decode array */
+  float page_left,             /* Left margin */
+      page_top,                /* Top margin */
+      page_width,              /* Page width in points */
+      page_height,             /* Page heigth in points */
+      x_factor,                /* X image scaling factor */
+      y_factor,                /* Y image scaling factor */
+      page_scaling;            /* Image scaling factor */
 #if !CUPS_LITE
-  ppd_size_t	*page_size;		/* Current page size */
-#endif /* !CUPS_LITE */
+  ppd_size_t *page_size; /* Current page size */
+#endif                   /* !CUPS_LITE */
 
-
- /*
-  * Open the input file...
-  */
+  /*
+   * Open the input file...
+   */
 
   if (filename)
   {
@@ -564,13 +550,13 @@ jpeg_to_ps(const char    *filename,	/* I - Filename */
   }
   else
   {
-    fd     = 0;
+    fd = 0;
     copies = 1;
   }
 
- /*
-  * Read the JPEG dimensions...
-  */
+  /*
+   * Read the JPEG dimensions...
+   */
 
   bytes = read(fd, buffer, sizeof(buffer));
 
@@ -586,82 +572,82 @@ jpeg_to_ps(const char    *filename,	/* I - Filename */
 
   for (bufptr = buffer + 2, bufend = buffer + bytes; bufptr < bufend;)
   {
-   /*
-    * Scan the file for a SOFn marker, then we can get the dimensions...
-    */
+    /*
+     * Scan the file for a SOFn marker, then we can get the dimensions...
+     */
 
     if (*bufptr == 0xff)
     {
-      bufptr ++;
+      bufptr++;
 
       if (bufptr >= bufend)
       {
-       /*
-	* If we are at the end of the current buffer, re-fill and continue...
-	*/
+        /*
+         * If we are at the end of the current buffer, re-fill and continue...
+         */
 
-	if ((bytes = read(fd, buffer, sizeof(buffer))) <= 0)
-	  break;
+        if ((bytes = read(fd, buffer, sizeof(buffer))) <= 0)
+          break;
 
-	bufptr = buffer;
-	bufend = buffer + bytes;
+        bufptr = buffer;
+        bufend = buffer + bytes;
       }
 
       if (*bufptr == 0xff)
-	continue;
+        continue;
 
       if ((bufptr + 16) >= bufend)
       {
-       /*
-	* Read more of the marker...
-	*/
+        /*
+         * Read more of the marker...
+         */
 
-	bytes = bufend - bufptr;
+        bytes = bufend - bufptr;
 
-	memmove(buffer, bufptr, (size_t)bytes);
-	bufptr = buffer;
-	bufend = buffer + bytes;
+        memmove(buffer, bufptr, (size_t)bytes);
+        bufptr = buffer;
+        bufend = buffer + bytes;
 
-	if ((bytes = read(fd, bufend, sizeof(buffer) - (size_t)bytes)) <= 0)
-	  break;
+        if ((bytes = read(fd, bufend, sizeof(buffer) - (size_t)bytes)) <= 0)
+          break;
 
-	bufend += bytes;
+        bufend += bytes;
       }
 
       length = (size_t)((bufptr[1] << 8) | bufptr[2]);
 
       if ((*bufptr >= 0xc0 && *bufptr <= 0xc3) || (*bufptr >= 0xc5 && *bufptr <= 0xc7) || (*bufptr >= 0xc9 && *bufptr <= 0xcb) || (*bufptr >= 0xcd && *bufptr <= 0xcf))
       {
-       /*
-	* SOFn marker, look for dimensions...
-	*/
+        /*
+         * SOFn marker, look for dimensions...
+         */
 
-	width  = (bufptr[6] << 8) | bufptr[7];
-	height = (bufptr[4] << 8) | bufptr[5];
-	depth  = bufptr[8];
-	break;
+        width = (bufptr[6] << 8) | bufptr[7];
+        height = (bufptr[4] << 8) | bufptr[5];
+        depth = bufptr[8];
+        break;
       }
 
-     /*
-      * Skip past this marker...
-      */
+      /*
+       * Skip past this marker...
+       */
 
-      bufptr ++;
+      bufptr++;
       bytes = bufend - bufptr;
 
       while (length >= bytes)
       {
-	length -= bytes;
+        length -= bytes;
 
-	if ((bytes = read(fd, buffer, sizeof(buffer))) <= 0)
-	  break;
+        if ((bytes = read(fd, buffer, sizeof(buffer))) <= 0)
+          break;
 
-	bufptr = buffer;
-	bufend = buffer + bytes;
+        bufptr = buffer;
+        bufend = buffer + bytes;
       }
 
       if (length > bytes)
-	break;
+        break;
 
       bufptr += length;
     }
@@ -681,29 +667,29 @@ jpeg_to_ps(const char    *filename,	/* I - Filename */
 
   fputs("ATTR: job-impressions=1\n", stderr);
 
- /*
-  * Figure out the dimensions/scaling of the final image...
-  */
+  /*
+   * Figure out the dimensions/scaling of the final image...
+   */
 
 #if CUPS_LITE
-  page_left   = 18.0f;
-  page_top    = 756.0f;
-  page_width  = 576.0f;
+  page_left = 18.0f;
+  page_top = 756.0f;
+  page_width = 576.0f;
   page_height = 720.0f;
 
 #else
   if ((page_size = ppdPageSize(ppd, NULL)) != NULL)
   {
-    page_left   = page_size->left;
-    page_top    = page_size->top;
-    page_width  = page_size->right - page_left;
+    page_left = page_size->left;
+    page_top = page_size->top;
+    page_width = page_size->right - page_left;
     page_height = page_top - page_size->bottom;
   }
   else
   {
-    page_left   = 18.0f;
-    page_top    = 756.0f;
-    page_width  = 576.0f;
+    page_left = 18.0f;
+    page_top = 756.0f;
+    page_width = 576.0f;
     page_height = 720.0f;
   }
 #endif /* CUPS_LITE */
@@ -721,13 +707,13 @@ jpeg_to_ps(const char    *filename,	/* I - Filename */
 
   fprintf(stderr, "DEBUG: Scaled dimensions are %.2fx%.2f\n", width * page_scaling, height * page_scaling);
 
- /*
-  * Write pages...
-  */
+  /*
+   * Write pages...
+   */
 
   dsc_header(copies);
 
-  for (copy = 1; copy <= copies; copy ++)
+  for (copy = 1; copy <= copies; copy++)
   {
     dsc_page(copy);
 
@@ -766,31 +752,29 @@ jpeg_to_ps(const char    *filename,	/* I - Filename */
   return (0);
 }
 
-
 /*
  * 'pdf_to_ps()' - Convert a PDF file to PostScript.
  */
 
-static int				/* O - Exit status */
-pdf_to_ps(const char    *filename,	/* I - Filename */
-	  int           copies,		/* I - Number of copies */
-	  int           num_options,	/* I - Number of options */
-	  cups_option_t *options)	/* I - options */
+static int                        /* O - Exit status */
+pdf_to_ps(const char *filename,   /* I - Filename */
+          int copies,             /* I - Number of copies */
+          int num_options,        /* I - Number of options */
+          cups_option_t *options) /* I - options */
 {
-  int		status;			/* Exit status */
-  char		tempfile[1024];		/* Temporary file */
-  int		tempfd;			/* Temporary file descriptor */
-  int		pid;			/* Process ID */
-  const char	*pdf_argv[8];		/* Command-line arguments */
-  char		pdf_options[1024];	/* Options */
-  const char	*value;			/* Option value */
-  const char	*job_id,		/* job-id value */
-		*job_name;		/* job-name value */
+  int status;              /* Exit status */
+  char tempfile[1024];     /* Temporary file */
+  int tempfd;              /* Temporary file descriptor */
+  int pid;                 /* Process ID */
+  const char *pdf_argv[8]; /* Command-line arguments */
+  char pdf_options[1024];  /* Options */
+  const char *value;       /* Option value */
+  const char *job_id,      /* job-id value */
+      *job_name;           /* job-name value */
 
-
- /*
-  * Create a temporary file for the PostScript version...
-  */
+  /*
+   * Create a temporary file for the PostScript version...
+   */
 
   if ((tempfd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
   {
@@ -798,9 +782,9 @@ pdf_to_ps(const char    *filename,	/* I - Filename */
     return (1);
   }
 
- /*
-  * Run cgpdftops or pdftops in the filter directory...
-  */
+  /*
+   * Run cgpdftops or pdftops in the filter directory...
+   */
 
   if ((value = cupsGetOption("PageSize", num_options, options)) != NULL)
     snprintf(pdf_options, sizeof(pdf_options), "PageSize=%s", value);
@@ -823,22 +807,22 @@ pdf_to_ps(const char    *filename,	/* I - Filename */
 
   if ((pid = fork()) == 0)
   {
-   /*
-    * Child comes here...
-    */
+    /*
+     * Child comes here...
+     */
 
     close(1);
     dup2(tempfd, 1);
     close(tempfd);
 
-    execv(PDFTOPS, (char * const *)pdf_argv);
+    execv(PDFTOPS, (char *const *)pdf_argv);
     exit(errno);
   }
   else if (pid < 0)
   {
-   /*
-    * Unable to fork process...
-    */
+    /*
+     * Unable to fork process...
+     */
 
     perror("ERROR: Unable to start PDF filter");
 
@@ -849,33 +833,35 @@ pdf_to_ps(const char    *filename,	/* I - Filename */
   }
   else
   {
-   /*
-    * Wait for the filter to complete...
-    */
+    /*
+     * Wait for the filter to complete...
+     */
 
     close(tempfd);
 
-#  ifdef HAVE_WAITPID
-    while (waitpid(pid, &status, 0) < 0);
-#  else
-    while (wait(&status) < 0);
-#  endif /* HAVE_WAITPID */
+#ifdef HAVE_WAITPID
+    while (waitpid(pid, &status, 0) < 0)
+      ;
+#else
+    while (wait(&status) < 0)
+      ;
+#endif /* HAVE_WAITPID */
 
     if (status)
     {
       if (WIFEXITED(status))
-	fprintf(stderr, "ERROR: " PDFTOPS " exited with status %d.\n", WEXITSTATUS(status));
+        fprintf(stderr, "ERROR: " PDFTOPS " exited with status %d.\n", WEXITSTATUS(status));
       else
-	fprintf(stderr, "ERROR: " PDFTOPS " terminated with signal %d.\n", WTERMSIG(status));
+        fprintf(stderr, "ERROR: " PDFTOPS " terminated with signal %d.\n", WTERMSIG(status));
 
       unlink(tempfile);
       return (1);
     }
   }
 
- /*
-  * Copy the PostScript output from the command...
-  */
+  /*
+   * Copy the PostScript output from the command...
+   */
 
   status = ps_to_ps(tempfile, copies);
 
@@ -884,29 +870,27 @@ pdf_to_ps(const char    *filename,	/* I - Filename */
   return (status);
 }
 
-
 /*
  * 'ps_to_ps()' - Copy PostScript to the standard output.
  */
 
-static int				/* O - Exit status */
-ps_to_ps(const char    *filename,	/* I - Filename */
-	 int           copies)		/* I - Number of copies */
+static int                     /* O - Exit status */
+ps_to_ps(const char *filename, /* I - Filename */
+         int copies)           /* I - Number of copies */
 {
-  FILE		*fp;				/* File to read from */
-  int		copy,				/* Current copy */
-		page,				/* Current page number */
-		num_pages = 0,			/* Total number of pages */
-		first_page,			/* First page */
-		last_page;			/* Last page */
-  const char	*page_ranges;			/* page-ranges option */
-  long		first_pos = -1;			/* Offset for first page */
-  char		line[1024];			/* Line from file */
+  FILE *fp;                /* File to read from */
+  int copy,                /* Current copy */
+      page,                /* Current page number */
+      num_pages = 0,       /* Total number of pages */
+      first_page,          /* First page */
+      last_page;           /* Last page */
+  const char *page_ranges; /* page-ranges option */
+  long first_pos = -1;     /* Offset for first page */
+  char line[1024];         /* Line from file */
 
-
- /*
-  * Open the print file...
-  */
+  /*
+   * Open the print file...
+   */
 
   if (filename)
   {
@@ -919,30 +903,30 @@ ps_to_ps(const char    *filename,	/* I - Filename */
   else
   {
     copies = 1;
-    fp     = stdin;
+    fp = stdin;
   }
 
- /*
-  * Check page ranges...
-  */
+  /*
+   * Check page ranges...
+   */
 
   if ((page_ranges = getenv("IPP_PAGE_RANGES")) != NULL)
   {
     if (sscanf(page_ranges, "%d-%d", &first_page, &last_page) != 2)
     {
       first_page = 1;
-      last_page  = INT_MAX;
+      last_page = INT_MAX;
     }
   }
   else
   {
     first_page = 1;
-    last_page  = INT_MAX;
+    last_page = INT_MAX;
   }
 
- /*
-  * Write the PostScript header for the document...
-  */
+  /*
+   * Write the PostScript header for the document...
+   */
 
   dsc_header(0);
 
@@ -961,9 +945,9 @@ ps_to_ps(const char    *filename,	/* I - Filename */
 
   if (!strncmp(line, "%%Page:", 7))
   {
-    for (copy = 0; copy < copies; copy ++)
+    for (copy = 0; copy < copies; copy++)
     {
-      int copy_page = 0;		/* Do we copy the page data? */
+      int copy_page = 0; /* Do we copy the page data? */
 
       if (fp != stdin)
         fseek(fp, first_pos, SEEK_SET);
@@ -973,17 +957,17 @@ ps_to_ps(const char    *filename,	/* I - Filename */
       {
         if (!strncmp(line, "%%Page:", 7))
         {
-          page ++;
+          page++;
           copy_page = page >= first_page && page <= last_page;
 
           if (copy_page)
           {
-	    num_pages ++;
-	    dsc_page(num_pages);
-	  }
-	}
-	else if (copy_page)
-	  fputs(line, stdout);
+            num_pages++;
+            dsc_page(num_pages);
+          }
+        }
+        else if (copy_page)
+          fputs(line, stdout);
       }
     }
   }
@@ -997,7 +981,6 @@ ps_to_ps(const char    *filename,	/* I - Filename */
 
   return (0);
 }
-
 
 /*
  * 'raster_to_ps()' - Convert PWG Raster/Apple Raster to PostScript.
@@ -1015,22 +998,21 @@ ps_to_ps(const char    *filename,	/* I - Filename */
  * filters.
  */
 
-static int				/* O - Exit status */
-raster_to_ps(const char *filename)	/* I - Filename */
+static int                         /* O - Exit status */
+raster_to_ps(const char *filename) /* I - Filename */
 {
-  int			fd;		/* Input file */
-  cups_raster_t		*ras;		/* Raster stream */
-  cups_page_header2_t	header;		/* Page header */
-  int			page = 0;	/* Current page */
-  unsigned		y;		/* Current line */
-  unsigned char		*line;		/* Line buffer */
-  unsigned char		white;		/* White color */
-  const char		*decode;	/* Image decode array */
+  int fd;                     /* Input file */
+  cups_raster_t *ras;         /* Raster stream */
+  cups_page_header2_t header; /* Page header */
+  int page = 0;               /* Current page */
+  unsigned y;                 /* Current line */
+  unsigned char *line;        /* Line buffer */
+  unsigned char white;        /* White color */
+  const char *decode;         /* Image decode array */
 
-
- /*
-  * Open the input file...
-  */
+  /*
+   * Open the input file...
+   */
 
   if (filename)
   {
@@ -1045,9 +1027,9 @@ raster_to_ps(const char *filename)	/* I - Filename */
     fd = 0;
   }
 
- /*
-  * Open the raster stream and send pages...
-  */
+  /*
+   * Open the raster stream and send pages...
+   */
 
   if ((ras = cupsRasterOpen(fd, CUPS_RASTER_READ)) == NULL)
   {
@@ -1059,7 +1041,7 @@ raster_to_ps(const char *filename)	/* I - Filename */
 
   while (cupsRasterReadHeader2(ras, &header))
   {
-    page ++;
+    page++;
 
     fprintf(stderr, "DEBUG: Page %d: %ux%ux%u\n", page, header.cupsWidth, header.cupsHeight, header.cupsBitsPerPixel);
 
@@ -1083,29 +1065,29 @@ raster_to_ps(const char *filename)	/* I - Filename */
 
     switch (header.cupsColorSpace)
     {
-      case CUPS_CSPACE_W :
-      case CUPS_CSPACE_SW :
-          decode = "0 1";
-          puts("/DeviceGray setcolorspace");
-          white = 255;
-          break;
+    case CUPS_CSPACE_W:
+    case CUPS_CSPACE_SW:
+      decode = "0 1";
+      puts("/DeviceGray setcolorspace");
+      white = 255;
+      break;
 
-      case CUPS_CSPACE_K :
-          decode = "0 1";
-          puts("/DeviceGray setcolorspace");
-          white = 0;
-          break;
+    case CUPS_CSPACE_K:
+      decode = "0 1";
+      puts("/DeviceGray setcolorspace");
+      white = 0;
+      break;
 
-      default :
-          decode = "0 1 0 1 0 1";
-          puts("/DeviceRGB setcolorspace");
-          white = 255;
-          break;
+    default:
+      decode = "0 1 0 1 0 1";
+      puts("/DeviceRGB setcolorspace");
+      white = 255;
+      break;
     }
 
     printf("gsave /L{grestore gsave 0 exch translate <</ImageType 1/Width %u/Height 1/BitsPerComponent %u/ImageMatrix[1 0 0 -1 0 1]/DataSource currentfile/ASCII85Decode filter/Decode[%s]>>image}bind def\n", header.cupsWidth, header.cupsBitsPerColor, decode);
 
-    for (y = header.cupsHeight; y > 0; y --)
+    for (y = header.cupsHeight; y > 0; y--)
     {
       if (cupsRasterReadPixels(ras, line, header.cupsBytesPerLine))
       {
@@ -1135,5 +1117,3 @@ raster_to_ps(const char *filename)	/* I - Filename */
 
   return (0);
 }
-
-

@@ -17,11 +17,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #if defined(_WIN32) || defined(__EMX__)
-#  include <io.h>
+#include <io.h>
 #else
-#  include <unistd.h>
+#include <unistd.h>
 #endif /* _WIN32 || __EMX__ */
-
 
 /*
  * 'cupsGetFd()' - Get a file from the server.
@@ -31,23 +30,22 @@
  * @since CUPS 1.1.20/macOS 10.4@
  */
 
-http_status_t				/* O - HTTP status */
-cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
-	  const char *resource,		/* I - Resource name */
-	  int        fd)		/* I - File descriptor */
+http_status_t                   /* O - HTTP status */
+cupsGetFd(http_t *http,         /* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
+          const char *resource, /* I - Resource name */
+          int fd)               /* I - File descriptor */
 {
-  ssize_t	bytes;			/* Number of bytes read */
-  char		buffer[8192];		/* Buffer for file */
-  http_status_t	status;			/* HTTP status from server */
-  char		if_modified_since[HTTP_MAX_VALUE];
-					/* If-Modified-Since header */
-  int		new_auth = 0;		/* Using new auth information? */
-  int		digest;			/* Are we using Digest authentication? */
+  ssize_t bytes;        /* Number of bytes read */
+  char buffer[8192];    /* Buffer for file */
+  http_status_t status; /* HTTP status from server */
+  char if_modified_since[HTTP_MAX_VALUE];
+  /* If-Modified-Since header */
+  int new_auth = 0; /* Using new auth information? */
+  int digest;       /* Are we using Digest authentication? */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   DEBUG_printf(("cupsGetFd(http=%p, resource=\"%s\", fd=%d)", (void *)http, resource, fd));
 
@@ -63,9 +61,9 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
     if ((http = _cupsConnect()) == NULL)
       return (HTTP_STATUS_SERVICE_UNAVAILABLE);
 
- /*
-  * Then send GET requests to the HTTP server...
-  */
+  /*
+   * Then send GET requests to the HTTP server...
+   */
 
   strlcpy(if_modified_since, httpGetField(http, HTTP_FIELD_IF_MODIFIED_SINCE),
           sizeof(if_modified_since));
@@ -77,8 +75,8 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       httpClearFields(http);
       if (httpReconnect2(http, 30000, NULL))
       {
-	status = HTTP_STATUS_ERROR;
-	break;
+        status = HTTP_STATUS_ERROR;
+        break;
       }
     }
 
@@ -89,9 +87,9 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
     if (digest && !new_auth)
     {
-     /*
-      * Update the Digest authentication string...
-      */
+      /*
+       * Update the Digest authentication string...
+       */
 
       _httpSetDigestAuthString(http, http->nextnonce, "GET", resource);
     }
@@ -99,10 +97,10 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 #ifdef HAVE_GSSAPI
     if (http->authstring && !strncmp(http->authstring, "Negotiate", 9) && !new_auth)
     {
-     /*
-      * Do not use cached Kerberos credentials since they will look like a
-      * "replay" attack...
-      */
+      /*
+       * Do not use cached Kerberos credentials since they will look like a
+       * "replay" attack...
+       */
 
       _cupsSetNegotiateAuthString(http, "GET", resource);
     }
@@ -115,7 +113,7 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       if (httpReconnect2(http, 30000, NULL))
       {
         status = HTTP_STATUS_ERROR;
-	break;
+        break;
       }
       else
       {
@@ -126,19 +124,20 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
     new_auth = 0;
 
-    while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+    while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE)
+      ;
 
     if (status == HTTP_STATUS_UNAUTHORIZED)
     {
-     /*
-      * Flush any error message...
-      */
+      /*
+       * Flush any error message...
+       */
 
       httpFlush(http);
 
-     /*
-      * See if we can do authentication...
-      */
+      /*
+       * See if we can do authentication...
+       */
 
       new_auth = 1;
 
@@ -176,18 +175,17 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       continue;
     }
 #endif /* HAVE_SSL */
-  }
-  while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED);
+  } while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED);
 
- /*
-  * See if we actually got the file or an error...
-  */
+  /*
+   * See if we actually got the file or an error...
+   */
 
   if (status == HTTP_STATUS_OK)
   {
-   /*
-    * Yes, copy the file...
-    */
+    /*
+     * Yes, copy the file...
+     */
 
     while ((bytes = httpRead2(http, buffer, sizeof(buffer))) > 0)
       write(fd, buffer, (size_t)bytes);
@@ -198,15 +196,14 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
     httpFlush(http);
   }
 
- /*
-  * Return the request status...
-  */
+  /*
+   * Return the request status...
+   */
 
   DEBUG_printf(("1cupsGetFd: Returning %d...", status));
 
   return (status);
 }
-
 
 /*
  * 'cupsGetFile()' - Get a file from the server.
@@ -216,18 +213,17 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
  * @since CUPS 1.1.20/macOS 10.4@
  */
 
-http_status_t				/* O - HTTP status */
-cupsGetFile(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
-	    const char *resource,	/* I - Resource name */
-	    const char *filename)	/* I - Filename */
+http_status_t                     /* O - HTTP status */
+cupsGetFile(http_t *http,         /* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
+            const char *resource, /* I - Resource name */
+            const char *filename) /* I - Filename */
 {
-  int		fd;			/* File descriptor */
-  http_status_t	status;			/* Status */
+  int fd;               /* File descriptor */
+  http_status_t status; /* Status */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!http || !resource || !filename)
   {
@@ -237,43 +233,42 @@ cupsGetFile(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DE
     return (HTTP_STATUS_ERROR);
   }
 
- /*
-  * Create the file...
-  */
+  /*
+   * Create the file...
+   */
 
   if ((fd = open(filename, O_WRONLY | O_EXCL | O_TRUNC)) < 0)
   {
-   /*
-    * Couldn't open the file!
-    */
+    /*
+     * Couldn't open the file!
+     */
 
     http->error = errno;
 
     return (HTTP_STATUS_ERROR);
   }
 
- /*
-  * Get the file...
-  */
+  /*
+   * Get the file...
+   */
 
   status = cupsGetFd(http, resource, fd);
 
- /*
-  * If the file couldn't be gotten, then remove the file...
-  */
+  /*
+   * If the file couldn't be gotten, then remove the file...
+   */
 
   close(fd);
 
   if (status != HTTP_STATUS_OK)
     unlink(filename);
 
- /*
-  * Return the HTTP status code...
-  */
+  /*
+   * Return the HTTP status code...
+   */
 
   return (status);
 }
-
 
 /*
  * 'cupsPutFd()' - Put a file on the server.
@@ -284,22 +279,21 @@ cupsGetFile(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DE
  * @since CUPS 1.1.20/macOS 10.4@
  */
 
-http_status_t				/* O - HTTP status */
-cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
-          const char *resource,		/* I - Resource name */
-	  int        fd)		/* I - File descriptor */
+http_status_t                   /* O - HTTP status */
+cupsPutFd(http_t *http,         /* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
+          const char *resource, /* I - Resource name */
+          int fd)               /* I - File descriptor */
 {
-  ssize_t	bytes;			/* Number of bytes read */
-  int		retries;		/* Number of retries */
-  char		buffer[8192];		/* Buffer for file */
-  http_status_t	status;			/* HTTP status from server */
-  int		new_auth = 0;		/* Using new auth information? */
-  int		digest;			/* Are we using Digest authentication? */
+  ssize_t bytes;        /* Number of bytes read */
+  int retries;          /* Number of retries */
+  char buffer[8192];    /* Buffer for file */
+  http_status_t status; /* HTTP status from server */
+  int new_auth = 0;     /* Using new auth information? */
+  int digest;           /* Are we using Digest authentication? */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   DEBUG_printf(("cupsPutFd(http=%p, resource=\"%s\", fd=%d)", (void *)http, resource, fd));
 
@@ -315,9 +309,9 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
     if ((http = _cupsConnect()) == NULL)
       return (HTTP_STATUS_SERVICE_UNAVAILABLE);
 
- /*
-  * Then send PUT requests to the HTTP server...
-  */
+  /*
+   * Then send PUT requests to the HTTP server...
+   */
 
   retries = 0;
 
@@ -328,8 +322,8 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       httpClearFields(http);
       if (httpReconnect2(http, 30000, NULL))
       {
-	status = HTTP_STATUS_ERROR;
-	break;
+        status = HTTP_STATUS_ERROR;
+        break;
       }
     }
 
@@ -344,9 +338,9 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
     if (digest && !new_auth)
     {
-     /*
-      * Update the Digest authentication string...
-      */
+      /*
+       * Update the Digest authentication string...
+       */
 
       _httpSetDigestAuthString(http, http->nextnonce, "PUT", resource);
     }
@@ -354,10 +348,10 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 #ifdef HAVE_GSSAPI
     if (http->authstring && !strncmp(http->authstring, "Negotiate", 9) && !new_auth)
     {
-     /*
-      * Do not use cached Kerberos credentials since they will look like a
-      * "replay" attack...
-      */
+      /*
+       * Do not use cached Kerberos credentials since they will look like a
+       * "replay" attack...
+       */
 
       _cupsSetNegotiateAuthString(http, "PUT", resource);
     }
@@ -370,7 +364,7 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       if (httpReconnect2(http, 30000, NULL))
       {
         status = HTTP_STATUS_ERROR;
-	break;
+        break;
       }
       else
       {
@@ -379,9 +373,9 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       }
     }
 
-   /*
-    * Wait up to 1 second for a 100-continue response...
-    */
+    /*
+     * Wait up to 1 second for a 100-continue response...
+     */
 
     if (httpWait(http, 1000))
       status = httpUpdate(http);
@@ -390,19 +384,19 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
     if (status == HTTP_STATUS_CONTINUE)
     {
-     /*
-      * Copy the file...
-      */
+      /*
+       * Copy the file...
+       */
 
       lseek(fd, 0, SEEK_SET);
 
       while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
-	if (httpCheck(http))
-	{
+        if (httpCheck(http))
+        {
           if ((status = httpUpdate(http)) != HTTP_STATUS_CONTINUE)
             break;
-	}
-	else
+        }
+        else
           httpWrite2(http, buffer, (size_t)bytes);
     }
 
@@ -410,14 +404,15 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
     {
       httpWrite2(http, buffer, 0);
 
-      while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE);
+      while ((status = httpUpdate(http)) == HTTP_STATUS_CONTINUE)
+        ;
     }
 
     if (status == HTTP_STATUS_ERROR && !retries)
     {
       DEBUG_printf(("2cupsPutFd: retry on status %d", status));
 
-      retries ++;
+      retries++;
 
       /* Flush any error message... */
       httpFlush(http);
@@ -439,15 +434,15 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
     if (status == HTTP_STATUS_UNAUTHORIZED)
     {
-     /*
-      * Flush any error message...
-      */
+      /*
+       * Flush any error message...
+       */
 
       httpFlush(http);
 
-     /*
-      * See if we can do authentication...
-      */
+      /*
+       * See if we can do authentication...
+       */
 
       new_auth = 1;
 
@@ -485,13 +480,12 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       continue;
     }
 #endif /* HAVE_SSL */
-  }
-  while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED ||
-         (status == HTTP_STATUS_ERROR && retries < 2));
+  } while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED ||
+           (status == HTTP_STATUS_ERROR && retries < 2));
 
- /*
-  * See if we actually put the file or an error...
-  */
+  /*
+   * See if we actually put the file or an error...
+   */
 
   if (status != HTTP_STATUS_CREATED)
   {
@@ -504,7 +498,6 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
   return (status);
 }
 
-
 /*
  * 'cupsPutFile()' - Put a file on the server.
  *
@@ -514,18 +507,17 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
  * @since CUPS 1.1.20/macOS 10.4@
  */
 
-http_status_t				/* O - HTTP status */
-cupsPutFile(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
-            const char *resource,	/* I - Resource name */
-	    const char *filename)	/* I - Filename */
+http_status_t                     /* O - HTTP status */
+cupsPutFile(http_t *http,         /* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
+            const char *resource, /* I - Resource name */
+            const char *filename) /* I - Filename */
 {
-  int		fd;			/* File descriptor */
-  http_status_t	status;			/* Status */
+  int fd;               /* File descriptor */
+  http_status_t status; /* Status */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!http || !resource || !filename)
   {
@@ -535,24 +527,24 @@ cupsPutFile(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DE
     return (HTTP_STATUS_ERROR);
   }
 
- /*
-  * Open the local file...
-  */
+  /*
+   * Open the local file...
+   */
 
   if ((fd = open(filename, O_RDONLY)) < 0)
   {
-   /*
-    * Couldn't open the file!
-    */
+    /*
+     * Couldn't open the file!
+     */
 
     http->error = errno;
 
     return (HTTP_STATUS_ERROR);
   }
 
- /*
-  * Put the file...
-  */
+  /*
+   * Put the file...
+   */
 
   status = cupsPutFd(http, resource, fd);
 

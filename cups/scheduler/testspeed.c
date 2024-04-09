@@ -19,96 +19,92 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 
-
 /*
  * Local functions...
  */
 
-static int	do_test(const char *server, int port,
-		        http_encryption_t encryption, int requests,
-			const char *opstring, int verbose);
-static void	usage(void) _CUPS_NORETURN;
-
+static int do_test(const char *server, int port,
+                   http_encryption_t encryption, int requests,
+                   const char *opstring, int verbose);
+static void usage(void) _CUPS_NORETURN;
 
 /*
  * 'main()' - Send multiple IPP requests and report on the average response
  *            time.
  */
 
-int
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int main(int argc,     /* I - Number of command-line arguments */
+         char *argv[]) /* I - Command-line arguments */
 {
-  int		i;			/* Looping var */
-  char		*server,		/* Server to use */
-		*ptr;			/* Pointer to port in server */
-  int		port;			/* Port to use */
-  http_encryption_t encryption;		/* Encryption to use */
-  int		requests;		/* Number of requests to send */
-  int		children;		/* Number of children to fork */
-  int		good_children;		/* Number of children that exited normally */
-  int		pid;			/* Child PID */
-  int		status;			/* Child status */
-  time_t	start,			/* Start time */
-		end;			/* End time */
-  double	elapsed;		/* Elapsed time */
-  int		verbose;		/* Verbosity */
-  const char	*opstring;		/* Operation name */
+  int i;                        /* Looping var */
+  char *server,                 /* Server to use */
+      *ptr;                     /* Pointer to port in server */
+  int port;                     /* Port to use */
+  http_encryption_t encryption; /* Encryption to use */
+  int requests;                 /* Number of requests to send */
+  int children;                 /* Number of children to fork */
+  int good_children;            /* Number of children that exited normally */
+  int pid;                      /* Child PID */
+  int status;                   /* Child status */
+  time_t start,                 /* Start time */
+      end;                      /* End time */
+  double elapsed;               /* Elapsed time */
+  int verbose;                  /* Verbosity */
+  const char *opstring;         /* Operation name */
 
+  /*
+   * Parse command-line options...
+   */
 
- /*
-  * Parse command-line options...
-  */
-
-  requests   = 100;
-  children   = 5;
-  server     = (char *)cupsServer();
-  port       = ippPort();
+  requests = 100;
+  children = 5;
+  server = (char *)cupsServer();
+  port = ippPort();
   encryption = HTTP_ENCRYPT_IF_REQUESTED;
-  verbose    = 0;
-  opstring   = NULL;
+  verbose = 0;
+  opstring = NULL;
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
     if (argv[i][0] == '-')
     {
-      for (ptr = argv[i] + 1; *ptr; ptr ++)
+      for (ptr = argv[i] + 1; *ptr; ptr++)
         switch (*ptr)
-	{
-	  case 'E' : /* Enable encryption */
-	      encryption = HTTP_ENCRYPT_REQUIRED;
-	      break;
+        {
+        case 'E': /* Enable encryption */
+          encryption = HTTP_ENCRYPT_REQUIRED;
+          break;
 
-	  case 'c' : /* Number of children */
-	      i ++;
-	      if (i >= argc)
-		usage();
+        case 'c': /* Number of children */
+          i++;
+          if (i >= argc)
+            usage();
 
-	      children = atoi(argv[i]);
-	      break;
+          children = atoi(argv[i]);
+          break;
 
-          case 'o' : /* Operation */
-	      i ++;
-	      if (i >= argc)
-		usage();
+        case 'o': /* Operation */
+          i++;
+          if (i >= argc)
+            usage();
 
-	      opstring = argv[i];
-	      break;
+          opstring = argv[i];
+          break;
 
-          case 'r' : /* Number of requests */
-	      i ++;
-	      if (i >= argc)
-		usage();
+        case 'r': /* Number of requests */
+          i++;
+          if (i >= argc)
+            usage();
 
-	      requests = atoi(argv[i]);
-	      break;
+          requests = atoi(argv[i]);
+          break;
 
-          case 'v' : /* Verbose logging */
-              verbose ++;
-	      break;
+        case 'v': /* Verbose logging */
+          verbose++;
+          break;
 
-          default :
-              usage();
-	      break;
+        default:
+          usage();
+          break;
         }
     }
     else
@@ -118,19 +114,20 @@ main(int  argc,				/* I - Number of command-line arguments */
       if (server[0] != '/' && (ptr = strrchr(server, ':')) != NULL)
       {
         *ptr++ = '\0';
-	port   = atoi(ptr);
+        port = atoi(ptr);
       }
     }
 
- /*
-  * Then create child processes to act as clients...
-  */
+  /*
+   * Then create child processes to act as clients...
+   */
 
   if (children > 0)
   {
     printf("testspeed: Simulating %d clients with %d requests to %s with "
-           "%sencryption...\n", children, requests, server,
-	   encryption == HTTP_ENCRYPT_IF_REQUESTED ? "no " : "");
+           "%sencryption...\n",
+           children, requests, server,
+           encryption == HTTP_ENCRYPT_IF_REQUESTED ? "no " : "");
   }
 
   start = time(NULL);
@@ -139,13 +136,14 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (do_test(server, port, encryption, requests, opstring, verbose));
   else if (children == 1)
     good_children = do_test(server, port, encryption, requests, opstring,
-                            verbose) ? 0 : 1;
+                            verbose)
+                        ? 0
+                        : 1;
   else
   {
-    char	options[255],		/* Command-line options for child */
-		reqstr[255],		/* Requests string for child */
-		serverstr[255];		/* Server:port string for child */
-
+    char options[255],  /* Command-line options for child */
+        reqstr[255],    /* Requests string for child */
+        serverstr[255]; /* Server:port string for child */
 
     snprintf(reqstr, sizeof(reqstr), "%d", requests);
 
@@ -162,36 +160,36 @@ main(int  argc,				/* I - Number of command-line arguments */
     if (verbose)
       strlcat(options, "v", sizeof(options));
 
-    for (i = 0; i < children; i ++)
+    for (i = 0; i < children; i++)
     {
       fflush(stdout);
 
       if ((pid = fork()) == 0)
       {
-       /*
-	* Child goes here...
-	*/
+        /*
+         * Child goes here...
+         */
 
         if (opstring)
-	  execlp(argv[0], argv[0], options, "0", reqstr, "-o", opstring,
-	         serverstr, (char *)NULL);
+          execlp(argv[0], argv[0], options, "0", reqstr, "-o", opstring,
+                 serverstr, (char *)NULL);
         else
-	  execlp(argv[0], argv[0], options, "0", reqstr, serverstr, (char *)NULL);
+          execlp(argv[0], argv[0], options, "0", reqstr, serverstr, (char *)NULL);
 
-	exit(errno);
+        exit(errno);
       }
       else if (pid < 0)
       {
-	printf("testspeed: Fork failed: %s\n", strerror(errno));
-	break;
+        printf("testspeed: Fork failed: %s\n", strerror(errno));
+        break;
       }
       else
-	printf("testspeed: Started child %d...\n", pid);
+        printf("testspeed: Started child %d...\n", pid);
     }
 
-   /*
-    * Wait for children to finish...
-    */
+    /*
+     * Wait for children to finish...
+     */
 
     puts("testspeed: Waiting for children to finish...");
 
@@ -200,70 +198,67 @@ main(int  argc,				/* I - Number of command-line arguments */
       pid = wait(&status);
 
       if (pid < 0 && errno != EINTR)
-	break;
+        break;
 
       printf("testspeed: Ended child %d (%d)...\n", pid, status / 256);
 
       if (!status)
-        good_children ++;
+        good_children++;
     }
   }
 
- /*
-  * Compute the total run time...
-  */
+  /*
+   * Compute the total run time...
+   */
 
   if (good_children > 0)
   {
-    end     = time(NULL);
+    end = time(NULL);
     elapsed = end - start;
-    i       = good_children * requests;
+    i = good_children * requests;
 
     printf("testspeed: %dx%d=%d requests in %.1fs (%.3fs/r, %.1fr/s)\n",
-	   good_children, requests, i, elapsed, elapsed / i, i / elapsed);
+           good_children, requests, i, elapsed, elapsed / i, i / elapsed);
   }
 
- /*
-  * Exit with no errors...
-  */
+  /*
+   * Exit with no errors...
+   */
 
   return (0);
 }
-
 
 /*
  * 'do_test()' - Run a test on a specific host...
  */
 
-static int				/* O - Exit status */
-do_test(const char        *server,	/* I - Server to use */
-        int               port,		/* I - Port number to use */
-        http_encryption_t encryption,	/* I - Encryption to use */
-	int               requests,	/* I - Number of requests to send */
-	const char        *opstring,	/* I - Operation string */
-	int               verbose)	/* I - Verbose output? */
+static int                            /* O - Exit status */
+do_test(const char *server,           /* I - Server to use */
+        int port,                     /* I - Port number to use */
+        http_encryption_t encryption, /* I - Encryption to use */
+        int requests,                 /* I - Number of requests to send */
+        const char *opstring,         /* I - Operation string */
+        int verbose)                  /* I - Verbose output? */
 {
-  int		i;			/* Looping var */
-  http_t	*http;			/* Connection to server */
-  ipp_t		*request;		/* IPP Request */
-  struct timeval start,			/* Start time */
-		end;			/* End time */
-  double	reqtime,		/* Time for this request */
-		elapsed;		/* Elapsed time */
-  int		op;			/* Current operation */
-  static ipp_op_t ops[5] =		/* Operations to test... */
-		{
-		  IPP_PRINT_JOB,
-		  CUPS_GET_DEFAULT,
-		  CUPS_GET_PRINTERS,
-		  CUPS_GET_CLASSES,
-		  IPP_GET_JOBS
-		};
+  int i;                   /* Looping var */
+  http_t *http;            /* Connection to server */
+  ipp_t *request;          /* IPP Request */
+  struct timeval start,    /* Start time */
+      end;                 /* End time */
+  double reqtime,          /* Time for this request */
+      elapsed;             /* Elapsed time */
+  int op;                  /* Current operation */
+  static ipp_op_t ops[5] = /* Operations to test... */
+      {
+          IPP_PRINT_JOB,
+          CUPS_GET_DEFAULT,
+          CUPS_GET_PRINTERS,
+          CUPS_GET_CLASSES,
+          IPP_GET_JOBS};
 
-
- /*
-  * Connect to the server...
-  */
+  /*
+   * Connect to the server...
+   */
 
   if ((http = httpConnectEncrypt(server, port, encryption)) == NULL)
   {
@@ -272,20 +267,20 @@ do_test(const char        *server,	/* I - Server to use */
     return (1);
   }
 
- /*
-  * Do multiple requests...
-  */
+  /*
+   * Do multiple requests...
+   */
 
-  for (elapsed = 0.0, i = 0; i < requests; i ++)
+  for (elapsed = 0.0, i = 0; i < requests; i++)
   {
-   /*
-    * Build a request which requires the following attributes:
-    *
-    *    attributes-charset
-    *    attributes-natural-language
-    *
-    * In addition, IPP_GET_JOBS needs a printer-uri attribute.
-    */
+    /*
+     * Build a request which requires the following attributes:
+     *
+     *    attributes-charset
+     *    attributes-natural-language
+     *
+     * In addition, IPP_GET_JOBS needs a printer-uri attribute.
+     */
 
     if (opstring)
       op = ippOpValue(opstring);
@@ -298,24 +293,24 @@ do_test(const char        *server,	/* I - Server to use */
 
     if (verbose)
       printf("testspeed(%d): %.6f %s ", (int)getpid(), elapsed,
-	     ippOpString(op));
+             ippOpString(op));
 
     switch (op)
     {
-      case IPP_GET_JOBS :
-	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-                       NULL, "ipp://localhost/printers/");
+    case IPP_GET_JOBS:
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
+                   NULL, "ipp://localhost/printers/");
 
-      default :
-	  ippDelete(cupsDoRequest(http, request, "/"));
-          break;
+    default:
+      ippDelete(cupsDoRequest(http, request, "/"));
+      break;
 
-      case IPP_PRINT_JOB :
-	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-                       NULL, "ipp://localhost/printers/test");
-	  ippDelete(cupsDoFileRequest(http, request, "/printers/test",
-	                              "../data/testprint.ps"));
-          break;
+    case IPP_PRINT_JOB:
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
+                   NULL, "ipp://localhost/printers/test");
+      ippDelete(cupsDoFileRequest(http, request, "/printers/test",
+                                  "../data/testprint.ps"));
+      break;
     }
 
     gettimeofday(&end, NULL);
@@ -326,23 +321,23 @@ do_test(const char        *server,	/* I - Server to use */
 
     switch (cupsLastError())
     {
-      case IPP_OK :
-      case IPP_NOT_FOUND :
-          if (verbose)
-	  {
-	    printf("succeeded: %s (%.6f)\n", cupsLastErrorString(), reqtime);
-	    fflush(stdout);
-	  }
-          break;
+    case IPP_OK:
+    case IPP_NOT_FOUND:
+      if (verbose)
+      {
+        printf("succeeded: %s (%.6f)\n", cupsLastErrorString(), reqtime);
+        fflush(stdout);
+      }
+      break;
 
-      default :
-          if (!verbose)
-	    printf("testspeed(%d): %s ", (int)getpid(),
-	           ippOpString(ops[i & 3]));
+    default:
+      if (!verbose)
+        printf("testspeed(%d): %s ", (int)getpid(),
+               ippOpString(ops[i & 3]));
 
-	  printf("failed: %s\n", cupsLastErrorString());
-          httpClose(http);
-	  return (1);
+      printf("failed: %s\n", cupsLastErrorString());
+      httpClose(http);
+      return (1);
     }
   }
 
@@ -353,7 +348,6 @@ do_test(const char        *server,	/* I - Server to use */
 
   return (0);
 }
-
 
 /*
  * 'usage()' - Show program usage...

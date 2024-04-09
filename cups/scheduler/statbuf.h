@@ -7,32 +7,29 @@
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
-
 /*
  * Constants...
  */
 
-#define CUPSD_SB_BUFFER_SIZE	2048	/* Bytes for job status buffer */
-
+#define CUPSD_SB_BUFFER_SIZE 2048 /* Bytes for job status buffer */
 
 /*
  * Types and structures...
  */
 
-typedef struct				/**** Status buffer */
+typedef struct /**** Status buffer */
 {
-  int	fd;				/* File descriptor to read from */
-  char	prefix[64];			/* Prefix for log messages */
-  int	bufused;			/* How much is used in buffer */
-  char	buffer[CUPSD_SB_BUFFER_SIZE];	/* Buffer */
+  int fd;                            /* File descriptor to read from */
+  char prefix[64];                   /* Prefix for log messages */
+  int bufused;                       /* How much is used in buffer */
+  char buffer[CUPSD_SB_BUFFER_SIZE]; /* Buffer */
 } cupsd_statbuf_t;
-
 
 /*
  * Prototypes...
  */
 
-extern void		cupsdStatBufDelete(cupsd_statbuf_t *sb);
-extern cupsd_statbuf_t	*cupsdStatBufNew(int fd, const char *prefix, ...);
-extern char		*cupsdStatBufUpdate(cupsd_statbuf_t *sb, int *loglevel,
-			                    char *line, int linelen);
+extern void cupsdStatBufDelete(cupsd_statbuf_t *sb);
+extern cupsd_statbuf_t *cupsdStatBufNew(int fd, const char *prefix, ...);
+extern char *cupsdStatBufUpdate(cupsd_statbuf_t *sb, int *loglevel,
+                                char *line, int linelen);

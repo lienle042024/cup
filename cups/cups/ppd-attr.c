@@ -16,56 +16,54 @@
 #include "ppd-private.h"
 #include "debug-internal.h"
 
-
 /*
  * 'ppdFindAttr()' - Find the first matching attribute.
  *
  * @since CUPS 1.1.19/macOS 10.3@
  */
 
-ppd_attr_t *				/* O - Attribute or @code NULL@ if not found */
-ppdFindAttr(ppd_file_t *ppd,		/* I - PPD file data */
-            const char *name,		/* I - Attribute name */
-            const char *spec)		/* I - Specifier string or @code NULL@ */
+ppd_attr_t *                  /* O - Attribute or @code NULL@ if not found */
+ppdFindAttr(ppd_file_t *ppd,  /* I - PPD file data */
+            const char *name, /* I - Attribute name */
+            const char *spec) /* I - Specifier string or @code NULL@ */
 {
-  ppd_attr_t	key,			/* Search key */
-		*attr;			/* Current attribute */
-
+  ppd_attr_t key, /* Search key */
+      *attr;      /* Current attribute */
 
   DEBUG_printf(("2ppdFindAttr(ppd=%p, name=\"%s\", spec=\"%s\")", ppd, name,
                 spec));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!ppd || !name || ppd->num_attrs == 0)
     return (NULL);
 
- /*
-  * Search for a matching attribute...
-  */
+  /*
+   * Search for a matching attribute...
+   */
 
   memset(&key, 0, sizeof(key));
   strlcpy(key.name, name, sizeof(key.name));
 
- /*
-  * Return the first matching attribute, if any...
-  */
+  /*
+   * Return the first matching attribute, if any...
+   */
 
   if ((attr = (ppd_attr_t *)cupsArrayFind(ppd->sorted_attrs, &key)) != NULL)
   {
     if (spec)
     {
-     /*
-      * Loop until we find the first matching attribute for "spec"...
-      */
+      /*
+       * Loop until we find the first matching attribute for "spec"...
+       */
 
       while (attr && _cups_strcasecmp(spec, attr->spec))
       {
         if ((attr = (ppd_attr_t *)cupsArrayNext(ppd->sorted_attrs)) != NULL &&
-	    _cups_strcasecmp(attr->name, name))
-	  attr = NULL;
+            _cups_strcasecmp(attr->name, name))
+          attr = NULL;
       }
     }
   }
@@ -73,43 +71,41 @@ ppdFindAttr(ppd_file_t *ppd,		/* I - PPD file data */
   return (attr);
 }
 
-
 /*
  * 'ppdFindNextAttr()' - Find the next matching attribute.
  *
  * @since CUPS 1.1.19/macOS 10.3@
  */
 
-ppd_attr_t *				/* O - Attribute or @code NULL@ if not found */
-ppdFindNextAttr(ppd_file_t *ppd,	/* I - PPD file data */
-                const char *name,	/* I - Attribute name */
-		const char *spec)	/* I - Specifier string or @code NULL@ */
+ppd_attr_t *                      /* O - Attribute or @code NULL@ if not found */
+ppdFindNextAttr(ppd_file_t *ppd,  /* I - PPD file data */
+                const char *name, /* I - Attribute name */
+                const char *spec) /* I - Specifier string or @code NULL@ */
 {
-  ppd_attr_t	*attr;			/* Current attribute */
+  ppd_attr_t *attr; /* Current attribute */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!ppd || !name || ppd->num_attrs == 0)
     return (NULL);
 
- /*
-  * See if there are more attributes to return...
-  */
+  /*
+   * See if there are more attributes to return...
+   */
 
   while ((attr = (ppd_attr_t *)cupsArrayNext(ppd->sorted_attrs)) != NULL)
   {
-   /*
-    * Check the next attribute to see if it is a match...
-    */
+    /*
+     * Check the next attribute to see if it is a match...
+     */
 
     if (_cups_strcasecmp(attr->name, name))
     {
-     /*
-      * Nope, reset the current pointer to the end of the array...
-      */
+      /*
+       * Nope, reset the current pointer to the end of the array...
+       */
 
       cupsArrayIndex(ppd->sorted_attrs, cupsArrayCount(ppd->sorted_attrs));
 
@@ -120,13 +116,12 @@ ppdFindNextAttr(ppd_file_t *ppd,	/* I - PPD file data */
       break;
   }
 
- /*
-  * Return the next attribute's value...
-  */
+  /*
+   * Return the next attribute's value...
+   */
 
   return (attr);
 }
-
 
 /*
  * '_ppdNormalizeMakeAndModel()' - Normalize a product/make-and-model string.
@@ -135,14 +130,13 @@ ppdFindNextAttr(ppd_file_t *ppd,	/* I - PPD file data */
  * to produce a clean make-and-model string we can use.
  */
 
-char *					/* O - Normalized make-and-model string or NULL on error */
+char * /* O - Normalized make-and-model string or NULL on error */
 _ppdNormalizeMakeAndModel(
-    const char *make_and_model,		/* I - Original make-and-model string */
-    char       *buffer,			/* I - String buffer */
-    size_t     bufsize)			/* I - Size of string buffer */
+    const char *make_and_model, /* I - Original make-and-model string */
+    char *buffer,               /* I - String buffer */
+    size_t bufsize)             /* I - Size of string buffer */
 {
-  char	*bufptr;			/* Pointer into buffer */
-
+  char *bufptr; /* Pointer into buffer */
 
   if (!make_and_model || !buffer || bufsize < 1)
   {
@@ -152,16 +146,16 @@ _ppdNormalizeMakeAndModel(
     return (NULL);
   }
 
- /*
-  * Skip leading whitespace...
-  */
+  /*
+   * Skip leading whitespace...
+   */
 
   while (_cups_isspace(*make_and_model))
-    make_and_model ++;
+    make_and_model++;
 
- /*
-  * Remove parenthesis and add manufacturers as needed...
-  */
+  /*
+   * Remove parenthesis and add manufacturers as needed...
+   */
 
   if (make_and_model[0] == '(')
   {
@@ -172,74 +166,74 @@ _ppdNormalizeMakeAndModel(
   }
   else if (!_cups_strncasecmp(make_and_model, "XPrint", 6))
   {
-   /*
-    * Xerox XPrint...
-    */
+    /*
+     * Xerox XPrint...
+     */
 
     snprintf(buffer, bufsize, "Xerox %s", make_and_model);
   }
   else if (!_cups_strncasecmp(make_and_model, "Eastman", 7))
   {
-   /*
-    * Kodak...
-    */
+    /*
+     * Kodak...
+     */
 
     snprintf(buffer, bufsize, "Kodak %s", make_and_model + 7);
   }
   else if (!_cups_strncasecmp(make_and_model, "laserwriter", 11))
   {
-   /*
-    * Apple LaserWriter...
-    */
+    /*
+     * Apple LaserWriter...
+     */
 
     snprintf(buffer, bufsize, "Apple LaserWriter%s", make_and_model + 11);
   }
   else if (!_cups_strncasecmp(make_and_model, "colorpoint", 10))
   {
-   /*
-    * Seiko...
-    */
+    /*
+     * Seiko...
+     */
 
     snprintf(buffer, bufsize, "Seiko %s", make_and_model);
   }
   else if (!_cups_strncasecmp(make_and_model, "fiery", 5))
   {
-   /*
-    * EFI...
-    */
+    /*
+     * EFI...
+     */
 
     snprintf(buffer, bufsize, "EFI %s", make_and_model);
   }
   else if (!_cups_strncasecmp(make_and_model, "ps ", 3) ||
-	   !_cups_strncasecmp(make_and_model, "colorpass", 9))
+           !_cups_strncasecmp(make_and_model, "colorpass", 9))
   {
-   /*
-    * Canon...
-    */
+    /*
+     * Canon...
+     */
 
     snprintf(buffer, bufsize, "Canon %s", make_and_model);
   }
   else if (!_cups_strncasecmp(make_and_model, "designjet", 9) ||
            !_cups_strncasecmp(make_and_model, "deskjet", 7))
   {
-   /*
-    * HP...
-    */
+    /*
+     * HP...
+     */
 
     snprintf(buffer, bufsize, "HP %s", make_and_model);
   }
   else
     strlcpy(buffer, make_and_model, bufsize);
 
- /*
-  * Clean up the make...
-  */
+  /*
+   * Clean up the make...
+   */
 
   if (!_cups_strncasecmp(buffer, "agfa", 4))
   {
-   /*
-    * Replace with AGFA (all uppercase)...
-    */
+    /*
+     * Replace with AGFA (all uppercase)...
+     */
 
     buffer[0] = 'A';
     buffer[1] = 'G';
@@ -248,9 +242,9 @@ _ppdNormalizeMakeAndModel(
   }
   else if (!_cups_strncasecmp(buffer, "Hewlett-Packard hp ", 19))
   {
-   /*
-    * Just put "HP" on the front...
-    */
+    /*
+     * Just put "HP" on the front...
+     */
 
     buffer[0] = 'H';
     buffer[1] = 'P';
@@ -258,9 +252,9 @@ _ppdNormalizeMakeAndModel(
   }
   else if (!_cups_strncasecmp(buffer, "Hewlett-Packard ", 16))
   {
-   /*
-    * Just put "HP" on the front...
-    */
+    /*
+     * Just put "HP" on the front...
+     */
 
     buffer[0] = 'H';
     buffer[1] = 'P';
@@ -268,17 +262,17 @@ _ppdNormalizeMakeAndModel(
   }
   else if (!_cups_strncasecmp(buffer, "Lexmark International", 21))
   {
-   /*
-    * Strip "International"...
-    */
+    /*
+     * Strip "International"...
+     */
 
     _cups_strcpy(buffer + 8, buffer + 21);
   }
   else if (!_cups_strncasecmp(buffer, "herk", 4))
   {
-   /*
-    * Replace with LHAG...
-    */
+    /*
+     * Replace with LHAG...
+     */
 
     buffer[0] = 'L';
     buffer[1] = 'H';
@@ -287,9 +281,9 @@ _ppdNormalizeMakeAndModel(
   }
   else if (!_cups_strncasecmp(buffer, "linotype", 8))
   {
-   /*
-    * Replace with LHAG...
-    */
+    /*
+     * Replace with LHAG...
+     */
 
     buffer[0] = 'L';
     buffer[1] = 'H';
@@ -298,13 +292,14 @@ _ppdNormalizeMakeAndModel(
     _cups_strcpy(buffer + 4, buffer + 8);
   }
 
- /*
-  * Remove trailing whitespace and return...
-  */
+  /*
+   * Remove trailing whitespace and return...
+   */
 
   for (bufptr = buffer + strlen(buffer) - 1;
        bufptr >= buffer && _cups_isspace(*bufptr);
-       bufptr --);
+       bufptr--)
+    ;
 
   bufptr[1] = '\0';
 

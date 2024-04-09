@@ -14,86 +14,82 @@
 
 #include <cups/cups-private.h>
 
-
 /*
  * Local functions...
  */
 
-static int	move_job(http_t *http, const char *src, int jobid, const char *dest);
-static void	usage(void) _CUPS_NORETURN;
-
+static int move_job(http_t *http, const char *src, int jobid, const char *dest);
+static void usage(void) _CUPS_NORETURN;
 
 /*
  * 'main()' - Parse options and show status information.
  */
 
-int
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int main(int argc,     /* I - Number of command-line arguments */
+         char *argv[]) /* I - Command-line arguments */
 {
-  int		i;			/* Looping var */
-  http_t	*http;			/* Connection to server */
-  const char	*opt,			/* Option pointer */
-		*job;			/* Job name */
-  int		jobid;			/* Job ID */
-  int		num_dests;		/* Number of destinations */
-  cups_dest_t	*dests;			/* Destinations */
-  const char	*src,			/* Original queue */
-		*dest;			/* New destination */
-
+  int i;              /* Looping var */
+  http_t *http;       /* Connection to server */
+  const char *opt,    /* Option pointer */
+      *job;           /* Job name */
+  int jobid;          /* Job ID */
+  int num_dests;      /* Number of destinations */
+  cups_dest_t *dests; /* Destinations */
+  const char *src,    /* Original queue */
+      *dest;          /* New destination */
 
   _cupsSetLocale(argv);
 
-  dest      = NULL;
-  dests     = NULL;
-  job       = NULL;
-  jobid     = 0;
+  dest = NULL;
+  dests = NULL;
+  job = NULL;
+  jobid = 0;
   num_dests = 0;
-  src       = NULL;
+  src = NULL;
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
   {
     if (!strcmp(argv[i], "--help"))
       usage();
     else if (argv[i][0] == '-')
     {
-      for (opt = argv[i] + 1; *opt; opt ++)
+      for (opt = argv[i] + 1; *opt; opt++)
       {
-	switch (*opt)
-	{
-	  case 'E' : /* Encrypt */
+        switch (*opt)
+        {
+        case 'E': /* Encrypt */
 #ifdef HAVE_SSL
-	      cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
+          cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
 
 #else
-	      _cupsLangPrintf(stderr, _("%s: Sorry, no encryption support."), argv[0]);
+          _cupsLangPrintf(stderr, _("%s: Sorry, no encryption support."), argv[0]);
 #endif /* HAVE_SSL */
-	      break;
+          break;
 
-	  case 'h' : /* Connect to host */
-	      if (opt[1] != '\0')
-	      {
-		cupsSetServer(opt + 1);
-		opt += strlen(opt) - 1;
-	      }
-	      else
-	      {
-		i ++;
+        case 'h': /* Connect to host */
+          if (opt[1] != '\0')
+          {
+            cupsSetServer(opt + 1);
+            opt += strlen(opt) - 1;
+          }
+          else
+          {
+            i++;
 
-		if (i >= argc)
-		{
-		  _cupsLangPuts(stderr, _("Error: need hostname after \"-h\" option."));
-		  usage();
-		}
+            if (i >= argc)
+            {
+              _cupsLangPuts(stderr, _("Error: need hostname after \"-h\" option."));
+              usage();
+            }
 
-		cupsSetServer(argv[i]);
-	      }
-	      break;
+            cupsSetServer(argv[i]);
+          }
+          break;
 
-	  default :
-	      _cupsLangPrintf(stderr, _("%s: Unknown option \"%c\"."), argv[0], *opt);
-	      usage();
-	}
+        default:
+          _cupsLangPrintf(stderr, _("%s: Unknown option \"%c\"."), argv[0], *opt);
+          usage();
+        }
       }
     }
     else if (!jobid && !src)
@@ -127,42 +123,40 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (http == NULL)
   {
     _cupsLangPrintf(stderr, _("lpmove: Unable to connect to server: %s"),
-		    strerror(errno));
+                    strerror(errno));
     return (1);
   }
 
   return (move_job(http, src, jobid, dest));
 }
 
-
 /*
  * 'move_job()' - Move a job.
  */
 
-static int				/* O - 0 on success, 1 on error */
-move_job(http_t     *http,		/* I - HTTP connection to server */
-         const char *src,		/* I - Source queue */
-         int        jobid,		/* I - Job ID */
-	 const char *dest)		/* I - Destination queue */
+static int                 /* O - 0 on success, 1 on error */
+move_job(http_t *http,     /* I - HTTP connection to server */
+         const char *src,  /* I - Source queue */
+         int jobid,        /* I - Job ID */
+         const char *dest) /* I - Destination queue */
 {
-  ipp_t	*request;			/* IPP Request */
-  char	job_uri[HTTP_MAX_URI],		/* job-uri */
-	printer_uri[HTTP_MAX_URI];	/* job-printer-uri */
-
+  ipp_t *request;                /* IPP Request */
+  char job_uri[HTTP_MAX_URI],    /* job-uri */
+      printer_uri[HTTP_MAX_URI]; /* job-printer-uri */
 
   if (!http)
     return (1);
 
- /*
-  * Build a CUPS_MOVE_JOB request, which requires the following
-  * attributes:
-  *
-  *    attributes-charset
-  *    attributes-natural-language
-  *    job-uri/printer-uri
-  *    job-printer-uri
-  *    requesting-user-name
-  */
+  /*
+   * Build a CUPS_MOVE_JOB request, which requires the following
+   * attributes:
+   *
+   *    attributes-charset
+   *    attributes-natural-language
+   *    job-uri/printer-uri
+   *    job-printer-uri
+   *    requesting-user-name
+   */
 
   request = ippNewRequest(CUPS_MOVE_JOB);
 
@@ -170,14 +164,14 @@ move_job(http_t     *http,		/* I - HTTP connection to server */
   {
     snprintf(job_uri, sizeof(job_uri), "ipp://localhost/jobs/%d", jobid);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "job-uri", NULL,
-        	 job_uri);
+                 job_uri);
   }
   else
   {
     httpAssembleURIf(HTTP_URI_CODING_ALL, job_uri, sizeof(job_uri), "ipp", NULL,
                      "localhost", 0, "/printers/%s", src);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
-        	 job_uri);
+                 job_uri);
   }
 
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
@@ -188,9 +182,9 @@ move_job(http_t     *http,		/* I - HTTP connection to server */
   ippAddString(request, IPP_TAG_JOB, IPP_TAG_URI, "job-printer-uri",
                NULL, printer_uri);
 
- /*
-  * Do the request and get back a response...
-  */
+  /*
+   * Do the request and get back a response...
+   */
 
   ippDelete(cupsDoRequest(http, request, "/jobs"));
 
@@ -202,7 +196,6 @@ move_job(http_t     *http,		/* I - HTTP connection to server */
   else
     return (0);
 }
-
 
 /*
  * 'usage()' - Show program usage and exit.

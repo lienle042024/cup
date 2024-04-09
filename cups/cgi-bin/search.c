@@ -15,46 +15,44 @@
 #include "cgi-private.h"
 #include <regex.h>
 
-
 /*
  * 'cgiCompileSearch()' - Compile a search string.
  */
 
-void *					/* O - Search context */
-cgiCompileSearch(const char *query)	/* I - Query string */
+void *                              /* O - Search context */
+cgiCompileSearch(const char *query) /* I - Query string */
 {
-  regex_t	*re;			/* Regular expression */
-  char		*s,			/* Regular expression string */
-		*sptr,			/* Pointer into RE string */
-		*sword;			/* Pointer to start of word */
-  size_t	slen;			/* Allocated size of RE string */
-  const char	*qptr,			/* Pointer into query string */
-		*qend;			/* End of current word */
-  const char	*prefix;		/* Prefix to add to next word */
-  int		quoted;			/* Word is quoted */
-  size_t	wlen;			/* Word length */
-  char		*lword;			/* Last word in query */
+  regex_t *re;        /* Regular expression */
+  char *s,            /* Regular expression string */
+      *sptr,          /* Pointer into RE string */
+      *sword;         /* Pointer to start of word */
+  size_t slen;        /* Allocated size of RE string */
+  const char *qptr,   /* Pointer into query string */
+      *qend;          /* End of current word */
+  const char *prefix; /* Prefix to add to next word */
+  int quoted;         /* Word is quoted */
+  size_t wlen;        /* Word length */
+  char *lword;        /* Last word in query */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!query)
     return (NULL);
 
- /*
-  * Allocate a regular expression storage structure...
-  */
+  /*
+   * Allocate a regular expression storage structure...
+   */
 
   if ((re = (regex_t *)calloc(1, sizeof(regex_t))) == NULL)
     return (NULL);
 
- /*
-  * Allocate a buffer to hold the regular expression string, starting
-  * at 1024 bytes or 3 times the length of the query string, whichever
-  * is greater.  We'll expand the string as needed...
-  */
+  /*
+   * Allocate a buffer to hold the regular expression string, starting
+   * at 1024 bytes or 3 times the length of the query string, whichever
+   * is greater.  We'll expand the string as needed...
+   */
 
   slen = strlen(query) * 3;
   if (slen < 1024)
@@ -66,77 +64,79 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     return (NULL);
   }
 
- /*
-  * Copy the query string to the regular expression, handling basic
-  * AND and OR logic...
-  */
+  /*
+   * Copy the query string to the regular expression, handling basic
+   * AND and OR logic...
+   */
 
   prefix = ".*";
-  qptr   = query;
-  sptr   = s;
-  lword  = NULL;
+  qptr = query;
+  sptr = s;
+  lword = NULL;
 
   while (*qptr)
   {
-   /*
-    * Skip leading whitespace...
-    */
+    /*
+     * Skip leading whitespace...
+     */
 
     while (isspace(*qptr & 255))
-      qptr ++;
+      qptr++;
 
     if (!*qptr)
       break;
 
-   /*
-    * Find the end of the current word...
-    */
+    /*
+     * Find the end of the current word...
+     */
 
     if (*qptr == '\"' || *qptr == '\'')
     {
-     /*
-      * Scan quoted string...
-      */
+      /*
+       * Scan quoted string...
+       */
 
-      quoted = *qptr ++;
-      for (qend = qptr; *qend && *qend != quoted; qend ++);
+      quoted = *qptr++;
+      for (qend = qptr; *qend && *qend != quoted; qend++)
+        ;
 
       if (!*qend)
       {
-       /*
-        * No closing quote, error out!
-	*/
+        /*
+         * No closing quote, error out!
+         */
 
-	free(s);
-	free(re);
+        free(s);
+        free(re);
 
-	if (lword)
+        if (lword)
           free(lword);
 
-	return (NULL);
+        return (NULL);
       }
     }
     else
     {
-     /*
-      * Scan whitespace-delimited string...
-      */
+      /*
+       * Scan whitespace-delimited string...
+       */
 
       quoted = 0;
-      for (qend = qptr + 1; *qend && !isspace(*qend); qend ++);
+      for (qend = qptr + 1; *qend && !isspace(*qend); qend++)
+        ;
     }
 
     wlen = (size_t)(qend - qptr);
 
-   /*
-    * Look for logic words: AND, OR
-    */
+    /*
+     * Look for logic words: AND, OR
+     */
 
     if (wlen == 3 && !_cups_strncasecmp(qptr, "AND", 3))
     {
-     /*
-      * Logical AND with the following text...
-      */
+      /*
+       * Logical AND with the following text...
+       */
 
       if (sptr > s)
         prefix = ".*";
@@ -145,9 +145,9 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     }
     else if (wlen == 2 && !_cups_strncasecmp(qptr, "OR", 2))
     {
-     /*
-      * Logical OR with the following text...
-      */
+      /*
+       * Logical OR with the following text...
+       */
 
       if (sptr > s)
         prefix = ".*|.*";
@@ -156,10 +156,10 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     }
     else
     {
-     /*
-      * Add a search word, making sure we have enough room for the
-      * string + RE overhead...
-      */
+      /*
+       * Add a search word, making sure we have enough room for the
+       * string + RE overhead...
+       */
 
       wlen = (size_t)(sptr - s) + 2 * 4 * wlen + 2 * strlen(prefix) + 11;
       if (lword)
@@ -167,107 +167,105 @@ cgiCompileSearch(const char *query)	/* I - Query string */
 
       if (wlen > slen)
       {
-       /*
-        * Expand the RE string buffer...
-	*/
+        /*
+         * Expand the RE string buffer...
+         */
 
-        char *temp;			/* Temporary string pointer */
+        char *temp; /* Temporary string pointer */
 
-
-	slen = wlen + 128;
+        slen = wlen + 128;
         temp = (char *)realloc(s, slen);
-	if (!temp)
-	{
-	  free(s);
-	  free(re);
+        if (!temp)
+        {
+          free(s);
+          free(re);
 
-	  if (lword)
+          if (lword)
             free(lword);
 
-	  return (NULL);
-	}
+          return (NULL);
+        }
 
         sptr = temp + (sptr - s);
-	s    = temp;
+        s = temp;
       }
 
-     /*
-      * Add the prefix string...
-      */
+      /*
+       * Add the prefix string...
+       */
 
       memcpy(sptr, prefix, strlen(prefix) + 1);
       sptr += strlen(sptr);
 
-     /*
-      * Then quote the remaining word characters as needed for the
-      * RE...
-      */
+      /*
+       * Then quote the remaining word characters as needed for the
+       * RE...
+       */
 
       sword = sptr;
 
       while (qptr < qend)
       {
-       /*
-        * Quote: ^ . [ $ ( ) | * + ? { \
-	*/
+        /*
+         * Quote: ^ . [ $ ( ) | * + ? { \
+         */
 
         if (strchr("^.[$()|*+?{\\", *qptr))
-	  *sptr++ = '\\';
+          *sptr++ = '\\';
 
-	*sptr++ = *qptr++;
+        *sptr++ = *qptr++;
       }
 
       *sptr = '\0';
 
-     /*
-      * For "word1 AND word2", add reciprocal "word2 AND word1"...
-      */
+      /*
+       * For "word1 AND word2", add reciprocal "word2 AND word1"...
+       */
 
       if (!strcmp(prefix, ".*") && lword)
       {
-        char *lword2;			/* New "last word" */
-
+        char *lword2; /* New "last word" */
 
         if ((lword2 = strdup(sword)) == NULL)
-	{
-	  free(lword);
-	  free(s);
-	  free(re);
-	  return (NULL);
-	}
+        {
+          free(lword);
+          free(s);
+          free(re);
+          return (NULL);
+        }
 
         memcpy(sptr, ".*|.*", 6);
-	sptr += 5;
+        sptr += 5;
 
-	memcpy(sptr, lword2, strlen(lword2) + 1);
-	sptr += strlen(sptr);
+        memcpy(sptr, lword2, strlen(lword2) + 1);
+        sptr += strlen(sptr);
 
         memcpy(sptr, ".*", 3);
-	sptr += 2;
+        sptr += 2;
 
-	memcpy(sptr, lword, strlen(lword) + 1);
-	sptr += strlen(sptr);
+        memcpy(sptr, lword, strlen(lword) + 1);
+        sptr += strlen(sptr);
 
         free(lword);
-	lword = lword2;
+        lword = lword2;
       }
       else
       {
-	if (lword)
+        if (lword)
           free(lword);
 
-	lword = strdup(sword);
+        lword = strdup(sword);
       }
 
       prefix = ".*|.*";
     }
 
-   /*
-    * Advance to the next string...
-    */
+    /*
+     * Advance to the next string...
+     */
 
     if (quoted)
-      qptr ++;
+      qptr++;
   }
 
   if (lword)
@@ -277,9 +275,9 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     memcpy(sptr, ".*", 3);
   else
   {
-   /*
-    * No query data, return NULL...
-    */
+    /*
+     * No query data, return NULL...
+     */
 
     free(s);
     free(re);
@@ -287,9 +285,9 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     return (NULL);
   }
 
- /*
-  * Compile the regular expression...
-  */
+  /*
+   * Compile the regular expression...
+   */
 
   if (regcomp(re, s, REG_EXTENDED | REG_ICASE))
   {
@@ -299,49 +297,47 @@ cgiCompileSearch(const char *query)	/* I - Query string */
     return (NULL);
   }
 
- /*
-  * Free the RE string and return the new regular expression we compiled...
-  */
+  /*
+   * Free the RE string and return the new regular expression we compiled...
+   */
 
   free(s);
 
   return ((void *)re);
 }
 
-
 /*
  * 'cgiDoSearch()' - Do a search of some text.
  */
 
-int					/* O - Number of matches */
-cgiDoSearch(void       *search,		/* I - Search context */
-            const char *text)		/* I - Text to search */
+int                           /* O - Number of matches */
+cgiDoSearch(void *search,     /* I - Search context */
+            const char *text) /* I - Text to search */
 {
-  int		i;			/* Looping var */
-  regmatch_t	matches[100];		/* RE matches */
+  int i;                   /* Looping var */
+  regmatch_t matches[100]; /* RE matches */
 
-
- /*
-  * Range check...
-  */
+  /*
+   * Range check...
+   */
 
   if (!search || !text)
     return (0);
 
- /*
-  * Do a lookup...
-  */
+  /*
+   * Do a lookup...
+   */
 
   if (!regexec((regex_t *)search, text, sizeof(matches) / sizeof(matches[0]),
                matches, 0))
   {
-   /*
-    * Figure out the number of matches in the string...
-    */
+    /*
+     * Figure out the number of matches in the string...
+     */
 
-    for (i = 0; i < (int)(sizeof(matches) / sizeof(matches[0])); i ++)
+    for (i = 0; i < (int)(sizeof(matches) / sizeof(matches[0])); i++)
       if (matches[i].rm_so < 0)
-	break;
+        break;
 
     return (i);
   }
@@ -349,13 +345,11 @@ cgiDoSearch(void       *search,		/* I - Search context */
     return (0);
 }
 
-
 /*
  * 'cgiFreeSearch()' - Free a compiled search context.
  */
 
-void
-cgiFreeSearch(void *search)		/* I - Search context */
+void cgiFreeSearch(void *search) /* I - Search context */
 {
   regfree((regex_t *)search);
   free(search);

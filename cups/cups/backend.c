@@ -15,13 +15,11 @@
 #include "backend.h"
 #include "ppd.h"
 
-
 /*
  * Local functions...
  */
 
-static void	quote_string(const char *s);
-
+static void quote_string(const char *s);
 
 /*
  * 'cupsBackendDeviceURI()' - Get the device URI for a backend.
@@ -34,16 +32,15 @@ static void	quote_string(const char *s);
  * @since CUPS 1.2/macOS 10.5@
  */
 
-const char *				/* O - Device URI or @code NULL@ */
-cupsBackendDeviceURI(char **argv)	/* I - Command-line arguments */
+const char *                      /* O - Device URI or @code NULL@ */
+cupsBackendDeviceURI(char **argv) /* I - Command-line arguments */
 {
-  const char	*device_uri,		/* Device URI */
-		*auth_info_required;	/* AUTH_INFO_REQUIRED env var */
-  _cups_globals_t *cg = _cupsGlobals();	/* Global info */
-  int		options;		/* Resolve options */
-  ppd_file_t	*ppd;			/* PPD file */
-  ppd_attr_t	*ppdattr;		/* PPD attribute */
-
+  const char *device_uri,               /* Device URI */
+      *auth_info_required;              /* AUTH_INFO_REQUIRED env var */
+  _cups_globals_t *cg = _cupsGlobals(); /* Global info */
+  int options;                          /* Resolve options */
+  ppd_file_t *ppd;                      /* PPD file */
+  ppd_attr_t *ppdattr;                  /* PPD attribute */
 
   if ((device_uri = getenv("DEVICE_URI")) == NULL)
   {
@@ -71,7 +68,6 @@ cupsBackendDeviceURI(char **argv)	/* I - Command-line arguments */
                           sizeof(cg->resolved_uri), options, NULL, NULL));
 }
 
-
 /*
  * 'cupsBackendReport()' - Write a device line from a backend.
  *
@@ -82,14 +78,13 @@ cupsBackendDeviceURI(char **argv)	/* I - Command-line arguments */
  * @since CUPS 1.4/macOS 10.6@
  */
 
-void
-cupsBackendReport(
-    const char *device_scheme,		/* I - device-scheme string */
-    const char *device_uri,		/* I - device-uri string */
-    const char *device_make_and_model,	/* I - device-make-and-model string or @code NULL@ */
-    const char *device_info,		/* I - device-info string or @code NULL@ */
-    const char *device_id,		/* I - device-id string or @code NULL@ */
-    const char *device_location)	/* I - device-location string or @code NULL@ */
+void cupsBackendReport(
+    const char *device_scheme,         /* I - device-scheme string */
+    const char *device_uri,            /* I - device-uri string */
+    const char *device_make_and_model, /* I - device-make-and-model string or @code NULL@ */
+    const char *device_info,           /* I - device-info string or @code NULL@ */
+    const char *device_id,             /* I - device-id string or @code NULL@ */
+    const char *device_location)       /* I - device-location string or @code NULL@ */
 {
   if (!device_scheme || !device_uri)
     return;
@@ -106,13 +101,12 @@ cupsBackendReport(
   fflush(stdout);
 }
 
-
 /*
  * 'quote_string()' - Write a quoted string to stdout, escaping \ and ".
  */
 
 static void
-quote_string(const char *s)		/* I - String to write */
+quote_string(const char *s) /* I - String to write */
 {
   fputs(" \"", stdout);
 
@@ -121,14 +115,14 @@ quote_string(const char *s)		/* I - String to write */
     while (*s)
     {
       if (*s == '\\' || *s == '\"')
-	putchar('\\');
+        putchar('\\');
 
       if (((*s & 255) < ' ' && *s != '\t') || *s == 0x7f)
         putchar(' ');
       else
         putchar(*s);
 
-      s ++;
+      s++;
     }
   }
 

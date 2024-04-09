@@ -17,46 +17,42 @@
 #include "debug-internal.h"
 #include "dir.h"
 
-
 /*
  * Windows implementation...
  */
 
 #ifdef _WIN32
-#  include <windows.h>
+#include <windows.h>
 
 /*
  * Types and structures...
  */
 
-struct _cups_dir_s			/**** Directory data structure ****/
+struct _cups_dir_s /**** Directory data structure ****/
 {
-  char		directory[1024];	/* Directory filename */
-  HANDLE	dir;			/* Directory handle */
-  cups_dentry_t	entry;			/* Directory entry */
+  char directory[1024]; /* Directory filename */
+  HANDLE dir;           /* Directory handle */
+  cups_dentry_t entry;  /* Directory entry */
 };
-
 
 /*
  * '_cups_dir_time()' - Convert a FILETIME value to a UNIX time value.
  */
 
-time_t					/* O - UNIX time */
-_cups_dir_time(FILETIME ft)		/* I - File time */
+time_t                      /* O - UNIX time */
+_cups_dir_time(FILETIME ft) /* I - File time */
 {
-  ULONGLONG	val;			/* File time in 0.1 usecs */
+  ULONGLONG val; /* File time in 0.1 usecs */
 
-
- /*
-  * Convert file time (1/10 microseconds since Jan 1, 1601) to UNIX
-  * time (seconds since Jan 1, 1970).  There are 11,644,732,800 seconds
-  * between them...
-  */
+  /*
+   * Convert file time (1/10 microseconds since Jan 1, 1601) to UNIX
+   * time (seconds since Jan 1, 1970).  There are 11,644,732,800 seconds
+   * between them...
+   */
 
   val = ft.dwLowDateTime + ((ULONGLONG)ft.dwHighDateTime << 32);
   return ((time_t)(val / 10000000 - 11644732800));
 }
-
 
 /*
  * 'cupsDirClose()' - Close a directory.
@@ -64,30 +60,28 @@ _cups_dir_time(FILETIME ft)		/* I - File time */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-void
-cupsDirClose(cups_dir_t *dp)		/* I - Directory pointer */
+void cupsDirClose(cups_dir_t *dp) /* I - Directory pointer */
 {
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return;
 
- /*
-  * Close an open directory handle...
-  */
+  /*
+   * Close an open directory handle...
+   */
 
   if (dp->dir != INVALID_HANDLE_VALUE)
     FindClose(dp->dir);
 
- /*
-  * Free memory used...
-  */
+  /*
+   * Free memory used...
+   */
 
   free(dp);
 }
-
 
 /*
  * 'cupsDirOpen()' - Open a directory.
@@ -95,42 +89,40 @@ cupsDirClose(cups_dir_t *dp)		/* I - Directory pointer */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-cups_dir_t *				/* O - Directory pointer or @code NULL@ if the directory could not be opened. */
-cupsDirOpen(const char *directory)	/* I - Directory name */
+cups_dir_t *                       /* O - Directory pointer or @code NULL@ if the directory could not be opened. */
+cupsDirOpen(const char *directory) /* I - Directory name */
 {
-  cups_dir_t	*dp;			/* Directory */
+  cups_dir_t *dp; /* Directory */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!directory)
     return (NULL);
 
- /*
-  * Allocate memory for the directory structure...
-  */
+  /*
+   * Allocate memory for the directory structure...
+   */
 
   dp = (cups_dir_t *)calloc(1, sizeof(cups_dir_t));
   if (!dp)
     return (NULL);
 
- /*
-  * Copy the directory name for later use...
-  */
+  /*
+   * Copy the directory name for later use...
+   */
 
   dp->dir = INVALID_HANDLE_VALUE;
 
   strlcpy(dp->directory, directory, sizeof(dp->directory));
 
- /*
-  * Return the new directory structure...
-  */
+  /*
+   * Return the new directory structure...
+   */
 
   return (dp);
 }
-
 
 /*
  * 'cupsDirRead()' - Read the next directory entry.
@@ -138,28 +130,27 @@ cupsDirOpen(const char *directory)	/* I - Directory name */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-cups_dentry_t *				/* O - Directory entry or @code NULL@ if there are no more */
-cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
+cups_dentry_t *             /* O - Directory entry or @code NULL@ if there are no more */
+cupsDirRead(cups_dir_t *dp) /* I - Directory pointer */
 {
-  WIN32_FIND_DATAA	entry;		/* Directory entry data */
+  WIN32_FIND_DATAA entry; /* Directory entry data */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return (NULL);
 
- /*
-  * See if we have already started finding files...
-  */
+  /*
+   * See if we have already started finding files...
+   */
 
   if (dp->dir == INVALID_HANDLE_VALUE)
   {
-   /*
-    * No, find the first file...
-    */
+    /*
+     * No, find the first file...
+     */
 
     dp->dir = FindFirstFileA(dp->directory, &entry);
     if (dp->dir == INVALID_HANDLE_VALUE)
@@ -168,9 +159,9 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
   else if (!FindNextFileA(dp->dir, &entry))
     return (NULL);
 
- /*
-  * Copy the name over and convert the file information...
-  */
+  /*
+   * Copy the name over and convert the file information...
+   */
 
   strlcpy(dp->entry.filename, entry.cFileName, sizeof(dp->entry.filename));
 
@@ -182,15 +173,14 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
   dp->entry.fileinfo.st_atime = _cups_dir_time(entry.ftLastAccessTime);
   dp->entry.fileinfo.st_ctime = _cups_dir_time(entry.ftCreationTime);
   dp->entry.fileinfo.st_mtime = _cups_dir_time(entry.ftLastWriteTime);
-  dp->entry.fileinfo.st_size  = entry.nFileSizeLow + ((unsigned long long)entry.nFileSizeHigh << 32);
+  dp->entry.fileinfo.st_size = entry.nFileSizeLow + ((unsigned long long)entry.nFileSizeHigh << 32);
 
- /*
-  * Return the entry...
-  */
+  /*
+   * Return the entry...
+   */
 
   return (&(dp->entry));
 }
-
 
 /*
  * 'cupsDirRewind()' - Rewind to the start of the directory.
@@ -198,19 +188,18 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-void
-cupsDirRewind(cups_dir_t *dp)		/* I - Directory pointer */
+void cupsDirRewind(cups_dir_t *dp) /* I - Directory pointer */
 {
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return;
 
- /*
-  * Close an open directory handle...
-  */
+  /*
+   * Close an open directory handle...
+   */
 
   if (dp->dir != INVALID_HANDLE_VALUE)
   {
@@ -219,28 +208,25 @@ cupsDirRewind(cups_dir_t *dp)		/* I - Directory pointer */
   }
 }
 
-
 #else
 
 /*
  * POSIX implementation...
  */
 
-#  include <sys/types.h>
-#  include <dirent.h>
-
+#include <sys/types.h>
+#include <dirent.h>
 
 /*
  * Types and structures...
  */
 
-struct _cups_dir_s			/**** Directory data structure ****/
+struct _cups_dir_s /**** Directory data structure ****/
 {
-  char		directory[1024];	/* Directory filename */
-  DIR		*dir;			/* Directory file */
-  cups_dentry_t	entry;			/* Directory entry */
+  char directory[1024]; /* Directory filename */
+  DIR *dir;             /* Directory file */
+  cups_dentry_t entry;  /* Directory entry */
 };
-
 
 /*
  * 'cupsDirClose()' - Close a directory.
@@ -248,26 +234,24 @@ struct _cups_dir_s			/**** Directory data structure ****/
  * @since CUPS 1.2/macOS 10.5@
  */
 
-void
-cupsDirClose(cups_dir_t *dp)		/* I - Directory pointer */
+void cupsDirClose(cups_dir_t *dp) /* I - Directory pointer */
 {
   DEBUG_printf(("cupsDirClose(dp=%p)", (void *)dp));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return;
 
- /*
-  * Close the directory and free memory...
-  */
+  /*
+   * Close the directory and free memory...
+   */
 
   closedir(dp->dir);
   free(dp);
 }
-
 
 /*
  * 'cupsDirOpen()' - Open a directory.
@@ -275,32 +259,31 @@ cupsDirClose(cups_dir_t *dp)		/* I - Directory pointer */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-cups_dir_t *				/* O - Directory pointer or @code NULL@ if the directory could not be opened. */
-cupsDirOpen(const char *directory)	/* I - Directory name */
+cups_dir_t *                       /* O - Directory pointer or @code NULL@ if the directory could not be opened. */
+cupsDirOpen(const char *directory) /* I - Directory name */
 {
-  cups_dir_t	*dp;			/* Directory */
-
+  cups_dir_t *dp; /* Directory */
 
   DEBUG_printf(("cupsDirOpen(directory=\"%s\")", directory));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!directory)
     return (NULL);
 
- /*
-  * Allocate memory for the directory structure...
-  */
+  /*
+   * Allocate memory for the directory structure...
+   */
 
   dp = (cups_dir_t *)calloc(1, sizeof(cups_dir_t));
   if (!dp)
     return (NULL);
 
- /*
-  * Open the directory...
-  */
+  /*
+   * Open the directory...
+   */
 
   dp->dir = opendir(directory);
   if (!dp->dir)
@@ -309,19 +292,18 @@ cupsDirOpen(const char *directory)	/* I - Directory name */
     return (NULL);
   }
 
- /*
-  * Copy the directory name for later use...
-  */
+  /*
+   * Copy the directory name for later use...
+   */
 
   strlcpy(dp->directory, directory, sizeof(dp->directory));
 
- /*
-  * Return the new directory structure...
-  */
+  /*
+   * Return the new directory structure...
+   */
 
   return (dp);
 }
-
 
 /*
  * 'cupsDirRead()' - Read the next directory entry.
@@ -329,31 +311,30 @@ cupsDirOpen(const char *directory)	/* I - Directory name */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-cups_dentry_t *				/* O - Directory entry or @code NULL@ when there are no more */
-cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
+cups_dentry_t *             /* O - Directory entry or @code NULL@ when there are no more */
+cupsDirRead(cups_dir_t *dp) /* I - Directory pointer */
 {
-  struct dirent	*entry;			/* Pointer to entry */
-  char		filename[1024];		/* Full filename */
-
+  struct dirent *entry; /* Pointer to entry */
+  char filename[1024];  /* Full filename */
 
   DEBUG_printf(("2cupsDirRead(dp=%p)", (void *)dp));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return (NULL);
 
- /*
-  * Try reading an entry that is not "." or ".."...
-  */
+  /*
+   * Try reading an entry that is not "." or ".."...
+   */
 
   for (;;)
   {
-   /*
-    * Read the next entry...
-    */
+    /*
+     * Read the next entry...
+     */
 
     if ((entry = readdir(dp->dir)) == NULL)
     {
@@ -363,16 +344,16 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
 
     DEBUG_printf(("4cupsDirRead: readdir() returned \"%s\"...", entry->d_name));
 
-   /*
-    * Skip "." and ".."...
-    */
+    /*
+     * Skip "." and ".."...
+     */
 
     if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
       continue;
 
-   /*
-    * Copy the name over and get the file information...
-    */
+    /*
+     * Copy the name over and get the file information...
+     */
 
     strlcpy(dp->entry.filename, entry->d_name, sizeof(dp->entry.filename));
 
@@ -385,14 +366,13 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
       continue;
     }
 
-   /*
-    * Return the entry...
-    */
+    /*
+     * Return the entry...
+     */
 
     return (&(dp->entry));
   }
 }
-
 
 /*
  * 'cupsDirRewind()' - Rewind to the start of the directory.
@@ -400,21 +380,20 @@ cupsDirRead(cups_dir_t *dp)		/* I - Directory pointer */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-void
-cupsDirRewind(cups_dir_t *dp)		/* I - Directory pointer */
+void cupsDirRewind(cups_dir_t *dp) /* I - Directory pointer */
 {
   DEBUG_printf(("cupsDirRewind(dp=%p)", (void *)dp));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!dp)
     return;
 
- /*
-  * Rewind the directory...
-  */
+  /*
+   * Rewind the directory...
+   */
 
   rewinddir(dp->dir);
 }

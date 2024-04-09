@@ -15,40 +15,37 @@
 
 #include <cups/cups-private.h>
 
-
 /*
  * Local functions...
  */
 
-static void	usage(const char *command) _CUPS_NORETURN;
-
+static void usage(const char *command) _CUPS_NORETURN;
 
 /*
  * 'main()' - Parse options and accept/reject jobs or disable/enable printers.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int		i;			/* Looping var */
-  char		*command,		/* Command to do */
-		*opt,			/* Option pointer */
-		uri[1024],		/* Printer URI */
-		*reason;		/* Reason for reject/disable */
-  ipp_t		*request;		/* IPP request */
-  ipp_op_t	op;			/* Operation */
-  int		cancel;			/* Cancel jobs? */
-
+  int i;          /* Looping var */
+  char *command,  /* Command to do */
+      *opt,       /* Option pointer */
+      uri[1024],  /* Printer URI */
+      *reason;    /* Reason for reject/disable */
+  ipp_t *request; /* IPP request */
+  ipp_op_t op;    /* Operation */
+  int cancel;     /* Cancel jobs? */
 
   _cupsSetLocale(argv);
 
- /*
-  * See what operation we're supposed to do...
-  */
+  /*
+   * See what operation we're supposed to do...
+   */
 
   if ((command = strrchr(argv[0], '/')) != NULL)
-    command ++;
+    command++;
   else
     command = argv[0];
 
@@ -70,11 +67,11 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   reason = NULL;
 
- /*
-  * Process command-line arguments...
-  */
+  /*
+   * Process command-line arguments...
+   */
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
   {
     if (!strcmp(argv[i], "--help"))
       usage(command);
@@ -84,90 +81,90 @@ main(int  argc,				/* I - Number of command-line arguments */
       op = IPP_RELEASE_HELD_NEW_JOBS;
     else if (argv[i][0] == '-')
     {
-      for (opt = argv[i] + 1; *opt; opt ++)
+      for (opt = argv[i] + 1; *opt; opt++)
       {
-	switch (*opt)
-	{
-	  case 'E' : /* Encrypt */
+        switch (*opt)
+        {
+        case 'E': /* Encrypt */
 #ifdef HAVE_SSL
-	      cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
+          cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
 #else
-	      _cupsLangPrintf(stderr, _("%s: Sorry, no encryption support."), command);
+          _cupsLangPrintf(stderr, _("%s: Sorry, no encryption support."), command);
 #endif /* HAVE_SSL */
-	      break;
+          break;
 
-	  case 'U' : /* Username */
-	      if (opt[1] != '\0')
-	      {
-		cupsSetUser(opt + 1);
-		opt += strlen(opt) - 1;
-	      }
-	      else
-	      {
-		i ++;
-		if (i >= argc)
-		{
-		  _cupsLangPrintf(stderr, _("%s: Error - expected username after \"-U\" option."), command);
-		  usage(command);
-		}
+        case 'U': /* Username */
+          if (opt[1] != '\0')
+          {
+            cupsSetUser(opt + 1);
+            opt += strlen(opt) - 1;
+          }
+          else
+          {
+            i++;
+            if (i >= argc)
+            {
+              _cupsLangPrintf(stderr, _("%s: Error - expected username after \"-U\" option."), command);
+              usage(command);
+            }
 
-		cupsSetUser(argv[i]);
-	      }
-	      break;
+            cupsSetUser(argv[i]);
+          }
+          break;
 
-	  case 'c' : /* Cancel jobs */
-	      cancel = 1;
-	      break;
+        case 'c': /* Cancel jobs */
+          cancel = 1;
+          break;
 
-	  case 'h' : /* Connect to host */
-	      if (opt[1] != '\0')
-	      {
-		cupsSetServer(opt + 1);
-		opt += strlen(opt) - 1;
-	      }
-	      else
-	      {
-		i ++;
-		if (i >= argc)
-		{
-		  _cupsLangPrintf(stderr, _("%s: Error - expected hostname after \"-h\" option."), command);
-		  usage(command);
-		}
+        case 'h': /* Connect to host */
+          if (opt[1] != '\0')
+          {
+            cupsSetServer(opt + 1);
+            opt += strlen(opt) - 1;
+          }
+          else
+          {
+            i++;
+            if (i >= argc)
+            {
+              _cupsLangPrintf(stderr, _("%s: Error - expected hostname after \"-h\" option."), command);
+              usage(command);
+            }
 
-		cupsSetServer(argv[i]);
-	      }
-	      break;
+            cupsSetServer(argv[i]);
+          }
+          break;
 
-	  case 'r' : /* Reason for cancellation */
-	      if (opt[1] != '\0')
-	      {
-		reason = opt + 1;
-		opt += strlen(opt) - 1;
-	      }
-	      else
-	      {
-		i ++;
-		if (i >= argc)
-		{
-		  _cupsLangPrintf(stderr, _("%s: Error - expected reason text after \"-r\" option."), command);
-		  usage(command);
-		}
+        case 'r': /* Reason for cancellation */
+          if (opt[1] != '\0')
+          {
+            reason = opt + 1;
+            opt += strlen(opt) - 1;
+          }
+          else
+          {
+            i++;
+            if (i >= argc)
+            {
+              _cupsLangPrintf(stderr, _("%s: Error - expected reason text after \"-r\" option."), command);
+              usage(command);
+            }
 
-		reason = argv[i];
-	      }
-	      break;
+            reason = argv[i];
+          }
+          break;
 
-	  default :
-	      _cupsLangPrintf(stderr, _("%s: Error - unknown option \"%c\"."), command, *opt);
-	      usage(command);
-	}
+        default:
+          _cupsLangPrintf(stderr, _("%s: Error - unknown option \"%c\"."), command, *opt);
+          usage(command);
+        }
       }
     }
     else
     {
-     /*
-      * Accept/disable/enable/reject a destination...
-      */
+      /*
+       * Accept/disable/enable/reject a destination...
+       */
 
       request = ippNewRequest(op);
 
@@ -180,50 +177,50 @@ main(int  argc,				/* I - Number of command-line arguments */
                    "requesting-user-name", NULL, cupsUser());
 
       if (reason != NULL)
-	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_TEXT,
+        ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_TEXT,
                      "printer-state-message", NULL, reason);
 
-     /*
-      * Do the request and get back a response...
-      */
+      /*
+       * Do the request and get back a response...
+       */
 
       ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
 
       if (cupsLastError() > IPP_OK_CONFLICT)
       {
-	_cupsLangPrintf(stderr,
-			_("%s: Operation failed: %s"),
-			command, ippErrorString(cupsLastError()));
-	return (1);
+        _cupsLangPrintf(stderr,
+                        _("%s: Operation failed: %s"),
+                        command, ippErrorString(cupsLastError()));
+        return (1);
       }
 
-     /*
-      * Cancel all jobs if requested...
-      */
+      /*
+       * Cancel all jobs if requested...
+       */
 
       if (cancel)
       {
-       /*
-	* Build an IPP_PURGE_JOBS request, which requires the following
-	* attributes:
-	*
-	*    attributes-charset
-	*    attributes-natural-language
-	*    printer-uri
-	*/
+        /*
+         * Build an IPP_PURGE_JOBS request, which requires the following
+         * attributes:
+         *
+         *    attributes-charset
+         *    attributes-natural-language
+         *    printer-uri
+         */
 
-	request = ippNewRequest(IPP_PURGE_JOBS);
+        request = ippNewRequest(IPP_PURGE_JOBS);
 
-	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+        ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
                      "printer-uri", NULL, uri);
 
-	ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+        ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
 
         if (cupsLastError() > IPP_OK_CONFLICT)
-	{
-	  _cupsLangPrintf(stderr, "%s: %s", command, cupsLastErrorString());
-	  return (1);
-	}
+        {
+          _cupsLangPrintf(stderr, "%s: %s", command, cupsLastErrorString());
+          return (1);
+        }
       }
     }
   }
@@ -231,13 +228,12 @@ main(int  argc,				/* I - Number of command-line arguments */
   return (0);
 }
 
-
 /*
  * 'usage()' - Show program usage and exit.
  */
 
 static void
-usage(const char *command)		/* I - Command name */
+usage(const char *command) /* I - Command name */
 {
   _cupsLangPrintf(stdout, _("Usage: %s [options] destination(s)"), command);
   _cupsLangPuts(stdout, _("Options:"));

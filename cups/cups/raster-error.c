@@ -16,23 +16,20 @@
 #include "raster-private.h"
 #include "debug-internal.h"
 
-
 /*
  * '_cupsRasterAddError()' - Add an error message to the error buffer.
  */
 
-void
-_cupsRasterAddError(const char *f,	/* I - Printf-style error message */
-                    ...)		/* I - Additional arguments as needed */
+void _cupsRasterAddError(const char *f, /* I - Printf-style error message */
+                         ...)           /* I - Additional arguments as needed */
 {
-  _cups_globals_t	*cg = _cupsGlobals();
-					/* Thread globals */
-  _cups_raster_error_t	*buf = &cg->raster_error;
-					/* Error buffer */
-  va_list	ap;			/* Pointer to additional arguments */
-  char		s[2048];		/* Message string */
-  ssize_t	bytes;			/* Bytes in message string */
-
+  _cups_globals_t *cg = _cupsGlobals();
+  /* Thread globals */
+  _cups_raster_error_t *buf = &cg->raster_error;
+  /* Error buffer */
+  va_list ap;    /* Pointer to additional arguments */
+  char s[2048];  /* Message string */
+  ssize_t bytes; /* Bytes in message string */
 
   DEBUG_printf(("_cupsRasterAddError(f=\"%s\", ...)", f));
 
@@ -45,20 +42,19 @@ _cupsRasterAddError(const char *f,	/* I - Printf-style error message */
 
   DEBUG_printf(("1_cupsRasterAddError: %s", s));
 
-  bytes ++;
+  bytes++;
 
   if ((size_t)bytes >= sizeof(s))
     return;
 
   if (bytes > (ssize_t)(buf->end - buf->current))
   {
-   /*
-    * Allocate more memory...
-    */
+    /*
+     * Allocate more memory...
+     */
 
-    char	*temp;			/* New buffer */
-    size_t	size;			/* Size of buffer */
-
+    char *temp;  /* New buffer */
+    size_t size; /* Size of buffer */
 
     size = (size_t)(buf->end - buf->start + 2 * bytes + 1024);
 
@@ -70,43 +66,39 @@ _cupsRasterAddError(const char *f,	/* I - Printf-style error message */
     if (!temp)
       return;
 
-   /*
-    * Update pointers...
-    */
+    /*
+     * Update pointers...
+     */
 
-    buf->end     = temp + size;
+    buf->end = temp + size;
     buf->current = temp + (buf->current - buf->start);
-    buf->start   = temp;
+    buf->start = temp;
   }
 
- /*
-  * Append the message to the end of the current string...
-  */
+  /*
+   * Append the message to the end of the current string...
+   */
 
   memcpy(buf->current, s, (size_t)bytes);
   buf->current += bytes - 1;
 }
 
-
 /*
  * '_cupsRasterClearError()' - Clear the error buffer.
  */
 
-void
-_cupsRasterClearError(void)
+void _cupsRasterClearError(void)
 {
-  _cups_globals_t	*cg = _cupsGlobals();
-					/* Thread globals */
-  _cups_raster_error_t	*buf = &cg->raster_error;
-					/* Error buffer */
-
+  _cups_globals_t *cg = _cupsGlobals();
+  /* Thread globals */
+  _cups_raster_error_t *buf = &cg->raster_error;
+  /* Error buffer */
 
   buf->current = buf->start;
 
   if (buf->start)
     *(buf->start) = '\0';
 }
-
 
 /*
  * '_cupsRasterErrorString()' - Return the last error from a raster function.
@@ -116,14 +108,13 @@ _cupsRasterClearError(void)
  * @since CUPS 1.3/macOS 10.5@
  */
 
-const char *				/* O - Last error */
+const char * /* O - Last error */
 _cupsRasterErrorString(void)
 {
-  _cups_globals_t	*cg = _cupsGlobals();
-					/* Thread globals */
-  _cups_raster_error_t	*buf = &cg->raster_error;
-					/* Error buffer */
-
+  _cups_globals_t *cg = _cupsGlobals();
+  /* Thread globals */
+  _cups_raster_error_t *buf = &cg->raster_error;
+  /* Error buffer */
 
   if (buf->current == buf->start)
     return (NULL);

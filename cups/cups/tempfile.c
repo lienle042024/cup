@@ -18,11 +18,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #if defined(_WIN32) || defined(__EMX__)
-#  include <io.h>
+#include <io.h>
 #else
-#  include <unistd.h>
+#include <unistd.h>
 #endif /* _WIN32 || __EMX__ */
-
 
 /*
  * 'cupsTempFd()' - Creates a temporary file.
@@ -31,26 +30,25 @@
  * The temporary file is opened for reading and writing.
  */
 
-int					/* O - New file descriptor or -1 on error */
-cupsTempFd(char *filename,		/* I - Pointer to buffer */
-           int  len)			/* I - Size of buffer */
+int                        /* O - New file descriptor or -1 on error */
+cupsTempFd(char *filename, /* I - Pointer to buffer */
+           int len)        /* I - Size of buffer */
 {
-  int		fd;			/* File descriptor for temp file */
-  int		tries;			/* Number of tries */
-  const char	*tmpdir;		/* TMPDIR environment var */
+  int fd;             /* File descriptor for temp file */
+  int tries;          /* Number of tries */
+  const char *tmpdir; /* TMPDIR environment var */
 #if defined(__APPLE__) || defined(_WIN32)
-  char		tmppath[1024];		/* Temporary directory */
-#endif /* __APPLE__ || _WIN32 */
+  char tmppath[1024]; /* Temporary directory */
+#endif                /* __APPLE__ || _WIN32 */
 #ifdef _WIN32
-  DWORD		curtime;		/* Current time */
+  DWORD curtime; /* Current time */
 #else
-  struct timeval curtime;		/* Current time */
+  struct timeval curtime; /* Current time */
 #endif /* _WIN32 */
 
-
- /*
-  * See if TMPDIR is defined...
-  */
+  /*
+   * See if TMPDIR is defined...
+   */
 
 #ifdef _WIN32
   if ((tmpdir = getenv("TEMP")) == NULL)
@@ -60,12 +58,12 @@ cupsTempFd(char *filename,		/* I - Pointer to buffer */
   }
 
 #elif defined(__APPLE__)
- /*
-  * On macOS and iOS, the TMPDIR environment variable is not always the best
-  * location to place temporary files due to sandboxing.  Instead, the confstr
-  * function should be called to get the proper per-user, per-process TMPDIR
-  * value.
-  */
+  /*
+   * On macOS and iOS, the TMPDIR environment variable is not always the best
+   * location to place temporary files due to sandboxing.  Instead, the confstr
+   * function should be called to get the proper per-user, per-process TMPDIR
+   * value.
+   */
 
   if ((tmpdir = getenv("TMPDIR")) != NULL && access(tmpdir, W_OK))
     tmpdir = NULL;
@@ -75,59 +73,59 @@ cupsTempFd(char *filename,		/* I - Pointer to buffer */
     if (confstr(_CS_DARWIN_USER_TEMP_DIR, tmppath, sizeof(tmppath)))
       tmpdir = tmppath;
     else
-      tmpdir = "/private/tmp";		/* This should never happen */
+      tmpdir = "/private/tmp"; /* This should never happen */
   }
 
 #else
- /*
-  * Previously we put root temporary files in the default CUPS temporary
-  * directory under /var/spool/cups.  However, since the scheduler cleans
-  * out temporary files there and runs independently of the user apps, we
-  * don't want to use it unless specifically told to by cupsd.
-  */
+  /*
+   * Previously we put root temporary files in the default CUPS temporary
+   * directory under /var/spool/cups.  However, since the scheduler cleans
+   * out temporary files there and runs independently of the user apps, we
+   * don't want to use it unless specifically told to by cupsd.
+   */
 
   if ((tmpdir = getenv("TMPDIR")) == NULL)
     tmpdir = "/tmp";
 #endif /* _WIN32 */
 
- /*
-  * Make the temporary name using the specified directory...
-  */
+  /*
+   * Make the temporary name using the specified directory...
+   */
 
   tries = 0;
 
   do
   {
 #ifdef _WIN32
-   /*
-    * Get the current time of day...
-    */
+    /*
+     * Get the current time of day...
+     */
 
-    curtime =  GetTickCount() + tries;
+    curtime = GetTickCount() + tries;
 
-   /*
-    * Format a string using the hex time values...
-    */
+    /*
+     * Format a string using the hex time values...
+     */
 
     snprintf(filename, (size_t)len - 1, "%s/%05lx%08lx", tmpdir, GetCurrentProcessId(), curtime);
 #else
-   /*
-    * Get the current time of day...
-    */
+    /*
+     * Get the current time of day...
+     */
 
     gettimeofday(&curtime, NULL);
 
-   /*
-    * Format a string using the hex time values...
-    */
+    /*
+     * Format a string using the hex time values...
+     */
 
     snprintf(filename, (size_t)len - 1, "%s/%05x%08x", tmpdir, (unsigned)getpid(), (unsigned)(curtime.tv_sec + curtime.tv_usec + tries));
 #endif /* _WIN32 */
 
-   /*
-    * Open the file in "exclusive" mode, making sure that we don't
-    * stomp on an existing file or someone's symlink crack...
-    */
+    /*
+     * Open the file in "exclusive" mode, making sure that we don't
+     * stomp on an existing file or someone's symlink crack...
+     */
 
 #ifdef _WIN32
     fd = open(filename, _O_CREAT | _O_RDWR | _O_TRUNC | _O_BINARY,
@@ -141,17 +139,15 @@ cupsTempFd(char *filename,		/* I - Pointer to buffer */
     if (fd < 0 && errno != EEXIST)
       break;
 
-    tries ++;
-  }
-  while (fd < 0 && tries < 1000);
+    tries++;
+  } while (fd < 0 && tries < 1000);
 
- /*
-  * Return the file descriptor...
-  */
+  /*
+   * Return the file descriptor...
+   */
 
   return (fd);
 }
-
 
 /*
  * 'cupsTempFile()' - Generates a temporary filename.
@@ -163,9 +159,9 @@ cupsTempFd(char *filename,		/* I - Pointer to buffer */
  * @deprecated@
  */
 
-char *					/* O - Filename or @code NULL@ on error */
-cupsTempFile(char *filename,		/* I - Pointer to buffer */
-             int  len)			/* I - Size of buffer */
+char *                       /* O - Filename or @code NULL@ on error */
+cupsTempFile(char *filename, /* I - Pointer to buffer */
+             int len)        /* I - Size of buffer */
 {
   (void)len;
 
@@ -174,7 +170,6 @@ cupsTempFile(char *filename,		/* I - Pointer to buffer */
 
   return (NULL);
 }
-
 
 /*
  * 'cupsTempFile2()' - Creates a temporary CUPS file.
@@ -185,13 +180,12 @@ cupsTempFile(char *filename,		/* I - Pointer to buffer */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-cups_file_t *				/* O - CUPS file or @code NULL@ on error */
-cupsTempFile2(char *filename,		/* I - Pointer to buffer */
-              int  len)			/* I - Size of buffer */
+cups_file_t *                 /* O - CUPS file or @code NULL@ on error */
+cupsTempFile2(char *filename, /* I - Pointer to buffer */
+              int len)        /* I - Size of buffer */
 {
-  cups_file_t	*file;			/* CUPS file */
-  int		fd;			/* File descriptor */
-
+  cups_file_t *file; /* CUPS file */
+  int fd;            /* File descriptor */
 
   if ((fd = cupsTempFd(filename, len)) < 0)
     return (NULL);

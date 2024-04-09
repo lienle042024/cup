@@ -14,60 +14,56 @@
 
 #include "cupsd.h"
 #ifdef HAVE_DBUS
-#  include <dbus/dbus.h>
-#  ifdef HAVE_DBUS_MESSAGE_ITER_INIT_APPEND
-#    define dbus_message_append_iter_init dbus_message_iter_init_append
-#    define dbus_message_iter_append_string(i,v) dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &(v))
-#    define dbus_message_iter_append_uint32(i,v) dbus_message_iter_append_basic(i, DBUS_TYPE_UINT32, &(v))
-#  endif /* HAVE_DBUS_MESSAGE_ITER_INIT_APPEND */
+#include <dbus/dbus.h>
+#ifdef HAVE_DBUS_MESSAGE_ITER_INIT_APPEND
+#define dbus_message_append_iter_init dbus_message_iter_init_append
+#define dbus_message_iter_append_string(i, v) dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &(v))
+#define dbus_message_iter_append_uint32(i, v) dbus_message_iter_append_basic(i, DBUS_TYPE_UINT32, &(v))
+#endif /* HAVE_DBUS_MESSAGE_ITER_INIT_APPEND */
 #endif /* HAVE_DBUS */
-
 
 /*
  * Local functions...
  */
 
-static int	cupsd_compare_subscriptions(cupsd_subscription_t *first,
-					    cupsd_subscription_t *second,
-					    void *unused);
-static void	cupsd_delete_event(cupsd_event_t *event);
+static int cupsd_compare_subscriptions(cupsd_subscription_t *first,
+                                       cupsd_subscription_t *second,
+                                       void *unused);
+static void cupsd_delete_event(cupsd_event_t *event);
 #ifdef HAVE_DBUS
-static void	cupsd_send_dbus(cupsd_eventmask_t event, cupsd_printer_t *dest,
-				cupsd_job_t *job);
+static void cupsd_send_dbus(cupsd_eventmask_t event, cupsd_printer_t *dest,
+                            cupsd_job_t *job);
 #endif /* HAVE_DBUS */
-static void	cupsd_send_notification(cupsd_subscription_t *sub,
-					cupsd_event_t *event);
-static void	cupsd_start_notifier(cupsd_subscription_t *sub);
-static void	cupsd_update_notifier(void);
-
+static void cupsd_send_notification(cupsd_subscription_t *sub,
+                                    cupsd_event_t *event);
+static void cupsd_start_notifier(cupsd_subscription_t *sub);
+static void cupsd_update_notifier(void);
 
 /*
  * 'cupsdAddEvent()' - Add an event to the global event cache.
  */
 
-void
-cupsdAddEvent(
-    cupsd_eventmask_t event,		/* I - Event */
-    cupsd_printer_t   *dest,		/* I - Printer associated with event */
-    cupsd_job_t	      *job,		/* I - Job associated with event */
-    const char	      *text,		/* I - Notification text */
-    ...)				/* I - Additional arguments as needed */
+void cupsdAddEvent(
+    cupsd_eventmask_t event, /* I - Event */
+    cupsd_printer_t *dest,   /* I - Printer associated with event */
+    cupsd_job_t *job,        /* I - Job associated with event */
+    const char *text,        /* I - Notification text */
+    ...)                     /* I - Additional arguments as needed */
 {
-  va_list		ap;		/* Pointer to additional arguments */
-  char			ftext[1024];	/* Formatted text buffer */
-  ipp_attribute_t	*attr;		/* Printer/job attribute */
-  cupsd_event_t		*temp;		/* New event pointer */
-  cupsd_subscription_t	*sub;		/* Current subscription */
-
+  va_list ap;                /* Pointer to additional arguments */
+  char ftext[1024];          /* Formatted text buffer */
+  ipp_attribute_t *attr;     /* Printer/job attribute */
+  cupsd_event_t *temp;       /* New event pointer */
+  cupsd_subscription_t *sub; /* Current subscription */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG2,
-		  "cupsdAddEvent(event=%s, dest=%p(%s), job=%p(%d), text=\"%s\", ...)",
-		  cupsdEventName(event), dest, dest ? dest->name : "",
-		  job, job ? job->id : 0, text);
+                  "cupsdAddEvent(event=%s, dest=%p(%s), job=%p(%d), text=\"%s\", ...)",
+                  cupsdEventName(event), dest, dest ? dest->name : "",
+                  job, job ? job->id : 0, text);
 
- /*
-  * Keep track of events with any OS-supplied notification mechanisms...
-  */
+  /*
+   * Keep track of events with any OS-supplied notification mechanisms...
+   */
 
   LastEvent |= event;
 
@@ -75,165 +71,165 @@ cupsdAddEvent(
   cupsd_send_dbus(event, dest, job);
 #endif /* HAVE_DBUS */
 
- /*
-  * Return if we aren't keeping events...
-  */
+  /*
+   * Return if we aren't keeping events...
+   */
 
   if (MaxEvents <= 0)
   {
     cupsdLogMessage(CUPSD_LOG_WARN,
-		    "cupsdAddEvent: Discarding %s event since MaxEvents is %d!",
-		    cupsdEventName(event), MaxEvents);
+                    "cupsdAddEvent: Discarding %s event since MaxEvents is %d!",
+                    cupsdEventName(event), MaxEvents);
     return;
   }
 
- /*
-  * Then loop through the subscriptions and add the event to the corresponding
-  * caches...
-  */
+  /*
+   * Then loop through the subscriptions and add the event to the corresponding
+   * caches...
+   */
 
   for (temp = NULL, sub = (cupsd_subscription_t *)cupsArrayFirst(Subscriptions);
        sub;
        sub = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
   {
-   /*
-    * Check if this subscription requires this event...
-    */
+    /*
+     * Check if this subscription requires this event...
+     */
 
     if ((sub->mask & event) != 0 && (sub->dest == dest || !sub->dest || sub->job == job))
     {
-     /*
-      * Need this event, so create a new event record...
-      */
+      /*
+       * Need this event, so create a new event record...
+       */
 
       if ((temp = (cupsd_event_t *)calloc(1, sizeof(cupsd_event_t))) == NULL)
       {
-	cupsdLogMessage(CUPSD_LOG_CRIT,
-			"Unable to allocate memory for event - %s",
-			strerror(errno));
-	return;
+        cupsdLogMessage(CUPSD_LOG_CRIT,
+                        "Unable to allocate memory for event - %s",
+                        strerror(errno));
+        return;
       }
 
       temp->event = event;
-      temp->time  = time(NULL);
+      temp->time = time(NULL);
       temp->attrs = ippNew();
-      temp->job	  = job;
+      temp->job = job;
 
       if (dest)
-	temp->dest = dest;
+        temp->dest = dest;
       else if (job)
-	temp->dest = dest = cupsdFindPrinter(job->dest);
+        temp->dest = dest = cupsdFindPrinter(job->dest);
 
-     /*
-      * Add common event notification attributes...
-      */
+      /*
+       * Add common event notification attributes...
+       */
 
       ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_CHARSET,
-		   "notify-charset", NULL, "utf-8");
+                   "notify-charset", NULL, "utf-8");
 
       ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_LANGUAGE,
-		   "notify-natural-language", NULL, "en-US");
+                   "notify-natural-language", NULL, "en-US");
 
       ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER,
-		    "notify-subscription-id", sub->id);
+                    "notify-subscription-id", sub->id);
 
       ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER,
-		    "notify-sequence-number", sub->next_event_id);
+                    "notify-sequence-number", sub->next_event_id);
 
       ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD,
-		   "notify-subscribed-event", NULL, cupsdEventName(event));
+                   "notify-subscribed-event", NULL, cupsdEventName(event));
 
       if (sub->user_data_len > 0)
-	ippAddOctetString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION,
-			  "notify-user-data", sub->user_data,
-			  sub->user_data_len);
+        ippAddOctetString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION,
+                          "notify-user-data", sub->user_data,
+                          sub->user_data_len);
 
       ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER,
-		    "printer-up-time", time(NULL));
+                    "printer-up-time", time(NULL));
 
       va_start(ap, text);
       vsnprintf(ftext, sizeof(ftext), text, ap);
       va_end(ap);
 
       ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_TEXT,
-		   "notify-text", NULL, ftext);
+                   "notify-text", NULL, ftext);
 
       if (dest)
       {
-       /*
-	* Add printer attributes...
-	*/
+        /*
+         * Add printer attributes...
+         */
 
-	ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_URI, "notify-printer-uri", NULL, dest->uri);
+        ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_URI, "notify-printer-uri", NULL, dest->uri);
 
-	ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_NAME, "printer-name", NULL, dest->name);
+        ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_NAME, "printer-name", NULL, dest->name);
 
-	ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_ENUM, "printer-state", (int)dest->state);
+        ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_ENUM, "printer-state", (int)dest->state);
 
-	if (dest->num_reasons == 0)
-	  ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "printer-state-reasons", NULL, dest->state == IPP_PRINTER_STOPPED ? "paused" : "none");
-	else
-	  ippAddStrings(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "printer-state-reasons", dest->num_reasons, NULL, (const char * const *)dest->reasons);
+        if (dest->num_reasons == 0)
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "printer-state-reasons", NULL, dest->state == IPP_PRINTER_STOPPED ? "paused" : "none");
+        else
+          ippAddStrings(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "printer-state-reasons", dest->num_reasons, NULL, (const char *const *)dest->reasons);
 
-	ippAddBoolean(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, "printer-is-accepting-jobs", (char)dest->accepting);
+        ippAddBoolean(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, "printer-is-accepting-jobs", (char)dest->accepting);
       }
 
       if (job)
       {
-       /*
-	* Add job attributes...
-	*/
+        /*
+         * Add job attributes...
+         */
 
-	ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER, "notify-job-id", job->id);
-	ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_ENUM, "job-state", (int)job->state_value);
+        ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER, "notify-job-id", job->id);
+        ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_ENUM, "job-state", (int)job->state_value);
 
-	if ((attr = ippFindAttribute(job->attrs, "job-name", IPP_TAG_NAME)) != NULL)
-	  ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_NAME, "job-name", NULL, attr->values[0].string.text);
+        if ((attr = ippFindAttribute(job->attrs, "job-name", IPP_TAG_NAME)) != NULL)
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_NAME, "job-name", NULL, attr->values[0].string.text);
 
-	switch (job->state_value)
-	{
-	  case IPP_JOB_PENDING :
-	      if (dest && dest->state == IPP_PRINTER_STOPPED)
-		ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "printer-stopped");
-	      else
-		ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "none");
-	      break;
+        switch (job->state_value)
+        {
+        case IPP_JOB_PENDING:
+          if (dest && dest->state == IPP_PRINTER_STOPPED)
+            ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "printer-stopped");
+          else
+            ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "none");
+          break;
 
-	  case IPP_JOB_HELD :
-	      if (ippFindAttribute(job->attrs, "job-hold-until", IPP_TAG_KEYWORD) != NULL ||
-		  ippFindAttribute(job->attrs, "job-hold-until", IPP_TAG_NAME) != NULL)
-		ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-hold-until-specified");
-	      else
-		ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-incoming");
-	      break;
+        case IPP_JOB_HELD:
+          if (ippFindAttribute(job->attrs, "job-hold-until", IPP_TAG_KEYWORD) != NULL ||
+              ippFindAttribute(job->attrs, "job-hold-until", IPP_TAG_NAME) != NULL)
+            ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-hold-until-specified");
+          else
+            ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-incoming");
+          break;
 
-	  case IPP_JOB_PROCESSING :
-	      ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-printing");
-	      break;
+        case IPP_JOB_PROCESSING:
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-printing");
+          break;
 
-	  case IPP_JOB_STOPPED :
-	      ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-stopped");
-	      break;
+        case IPP_JOB_STOPPED:
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-stopped");
+          break;
 
-	  case IPP_JOB_CANCELED :
-	      ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-canceled-by-user");
-	      break;
+        case IPP_JOB_CANCELED:
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-canceled-by-user");
+          break;
 
-	  case IPP_JOB_ABORTED :
-	      ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "aborted-by-system");
-	      break;
+        case IPP_JOB_ABORTED:
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "aborted-by-system");
+          break;
 
-	  case IPP_JOB_COMPLETED :
-	      ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-completed-successfully");
-	      break;
-	}
+        case IPP_JOB_COMPLETED:
+          ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_KEYWORD, "job-state-reasons", NULL, "job-completed-successfully");
+          break;
+        }
 
-	ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER, "job-impressions-completed", job->sheets ? job->sheets->values[0].integer : 0);
+        ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER, "job-impressions-completed", job->sheets ? job->sheets->values[0].integer : 0);
       }
 
-     /*
-      * Send the notification for this subscription...
-      */
+      /*
+       * Send the notification for this subscription...
+       */
 
       cupsd_send_notification(sub, temp);
     }
@@ -245,110 +241,110 @@ cupsdAddEvent(
     cupsdLogMessage(CUPSD_LOG_DEBUG, "Discarding unused %s event...", cupsdEventName(event));
 }
 
-
 /*
  * 'cupsdAddSubscription()' - Add a new subscription object.
  */
 
-cupsd_subscription_t *			/* O - New subscription object */
+cupsd_subscription_t * /* O - New subscription object */
 cupsdAddSubscription(
-    unsigned	    mask,		/* I - Event mask */
-    cupsd_printer_t *dest,		/* I - Printer, if any */
-    cupsd_job_t	    *job,		/* I - Job, if any */
-    const char	    *uri,		/* I - notify-recipient-uri, if any */
-    int		    sub_id)		/* I - notify-subscription-id or 0 */
+    unsigned mask,         /* I - Event mask */
+    cupsd_printer_t *dest, /* I - Printer, if any */
+    cupsd_job_t *job,      /* I - Job, if any */
+    const char *uri,       /* I - notify-recipient-uri, if any */
+    int sub_id)            /* I - notify-subscription-id or 0 */
 {
-  cupsd_subscription_t	*temp;		/* New subscription object */
-
+  cupsd_subscription_t *temp; /* New subscription object */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG,
-		  "cupsdAddSubscription(mask=%x, dest=%p(%s), job=%p(%d), "
-		  "uri=\"%s\")",
-		  mask, dest, dest ? dest->name : "", job, job ? job->id : 0,
-		  uri ? uri : "(null)");
+                  "cupsdAddSubscription(mask=%x, dest=%p(%s), job=%p(%d), "
+                  "uri=\"%s\")",
+                  mask, dest, dest ? dest->name : "", job, job ? job->id : 0,
+                  uri ? uri : "(null)");
 
   if (!Subscriptions)
     Subscriptions = cupsArrayNew((cups_array_func_t)cupsd_compare_subscriptions,
-				 NULL);
+                                 NULL);
 
   if (!Subscriptions)
   {
     cupsdLogMessage(CUPSD_LOG_CRIT,
-		    "Unable to allocate memory for subscriptions - %s",
-		    strerror(errno));
+                    "Unable to allocate memory for subscriptions - %s",
+                    strerror(errno));
     return (NULL);
   }
 
- /*
-  * Limit the number of subscriptions...
-  */
+  /*
+   * Limit the number of subscriptions...
+   */
 
   if (MaxSubscriptions > 0 && cupsArrayCount(Subscriptions) >= MaxSubscriptions)
   {
     cupsdLogMessage(CUPSD_LOG_DEBUG,
-		    "cupsdAddSubscription: Reached MaxSubscriptions %d "
-		    "(count=%d)", MaxSubscriptions,
-		    cupsArrayCount(Subscriptions));
+                    "cupsdAddSubscription: Reached MaxSubscriptions %d "
+                    "(count=%d)",
+                    MaxSubscriptions,
+                    cupsArrayCount(Subscriptions));
     return (NULL);
   }
 
   if (MaxSubscriptionsPerJob > 0 && job)
   {
-    int count;				/* Number of job subscriptions */
+    int count; /* Number of job subscriptions */
 
     for (temp = (cupsd_subscription_t *)cupsArrayFirst(Subscriptions),
-	     count = 0;
-	 temp;
-	 temp = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
+        count = 0;
+         temp;
+         temp = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
       if (temp->job == job)
-	count ++;
+        count++;
 
     if (count >= MaxSubscriptionsPerJob)
     {
       cupsdLogMessage(CUPSD_LOG_DEBUG,
-		      "cupsdAddSubscription: Reached MaxSubscriptionsPerJob %d "
-		      "for job #%d (count=%d)", MaxSubscriptionsPerJob,
-		      job->id, count);
+                      "cupsdAddSubscription: Reached MaxSubscriptionsPerJob %d "
+                      "for job #%d (count=%d)",
+                      MaxSubscriptionsPerJob,
+                      job->id, count);
       return (NULL);
     }
   }
 
   if (MaxSubscriptionsPerPrinter > 0 && dest)
   {
-    int count;				/* Number of printer subscriptions */
+    int count; /* Number of printer subscriptions */
 
     for (temp = (cupsd_subscription_t *)cupsArrayFirst(Subscriptions),
-	     count = 0;
-	 temp;
-	 temp = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
+        count = 0;
+         temp;
+         temp = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
       if (temp->dest == dest)
-	count ++;
+        count++;
 
     if (count >= MaxSubscriptionsPerPrinter)
     {
       cupsdLogMessage(CUPSD_LOG_DEBUG,
-		      "cupsdAddSubscription: Reached "
-		      "MaxSubscriptionsPerPrinter %d for %s (count=%d)",
-		      MaxSubscriptionsPerPrinter, dest->name, count);
+                      "cupsdAddSubscription: Reached "
+                      "MaxSubscriptionsPerPrinter %d for %s (count=%d)",
+                      MaxSubscriptionsPerPrinter, dest->name, count);
       return (NULL);
     }
   }
 
- /*
-  * Allocate memory for this subscription...
-  */
+  /*
+   * Allocate memory for this subscription...
+   */
 
   if ((temp = calloc(1, sizeof(cupsd_subscription_t))) == NULL)
   {
     cupsdLogMessage(CUPSD_LOG_CRIT,
-		    "Unable to allocate memory for subscription object - %s",
-		    strerror(errno));
+                    "Unable to allocate memory for subscription object - %s",
+                    strerror(errno));
     return (NULL);
   }
 
- /*
-  * Fill in common data...
-  */
+  /*
+   * Fill in common data...
+   */
 
   if (sub_id)
   {
@@ -361,27 +357,27 @@ cupsdAddSubscription(
   {
     temp->id = NextSubscriptionId;
 
-    NextSubscriptionId ++;
+    NextSubscriptionId++;
   }
 
-  temp->mask	       = mask;
-  temp->dest	       = dest;
-  temp->job	       = job;
-  temp->pipe	       = -1;
+  temp->mask = mask;
+  temp->dest = dest;
+  temp->job = job;
+  temp->pipe = -1;
   temp->first_event_id = 1;
-  temp->next_event_id  = 1;
+  temp->next_event_id = 1;
 
   cupsdSetString(&(temp->recipient), uri);
 
- /*
-  * Add the subscription to the array...
-  */
+  /*
+   * Add the subscription to the array...
+   */
 
   cupsArrayAdd(Subscriptions, temp);
 
- /*
-  * For RSS subscriptions, run the notifier immediately...
-  */
+  /*
+   * For RSS subscriptions, run the notifier immediately...
+   */
 
   if (uri && !strncmp(uri, "rss:", 4))
     cupsd_start_notifier(temp);
@@ -389,16 +385,13 @@ cupsdAddSubscription(
   return (temp);
 }
 
-
 /*
  * 'cupsdDeleteAllSubscriptions()' - Delete all subscriptions.
  */
 
-void
-cupsdDeleteAllSubscriptions(void)
+void cupsdDeleteAllSubscriptions(void)
 {
-  cupsd_subscription_t	*sub;		/* Subscription */
-
+  cupsd_subscription_t *sub; /* Subscription */
 
   if (!Subscriptions)
     return;
@@ -412,32 +405,30 @@ cupsdDeleteAllSubscriptions(void)
   Subscriptions = NULL;
 }
 
-
 /*
  * 'cupsdDeleteSubscription()' - Delete a subscription object.
  */
 
-void
-cupsdDeleteSubscription(
-    cupsd_subscription_t *sub,		/* I - Subscription object */
-    int			 update)	/* I - 1 = update subscriptions.conf */
+void cupsdDeleteSubscription(
+    cupsd_subscription_t *sub, /* I - Subscription object */
+    int update)                /* I - 1 = update subscriptions.conf */
 {
- /*
-  * Close the pipe to the notifier as needed...
-  */
+  /*
+   * Close the pipe to the notifier as needed...
+   */
 
   if (sub->pipe >= 0)
     close(sub->pipe);
 
- /*
-  * Remove subscription from array...
-  */
+  /*
+   * Remove subscription from array...
+   */
 
   cupsArrayRemove(Subscriptions, sub);
 
- /*
-  * Free memory...
-  */
+  /*
+   * Free memory...
+   */
 
   cupsdClearString(&(sub->owner));
   cupsdClearString(&(sub->recipient));
@@ -446,109 +437,107 @@ cupsdDeleteSubscription(
 
   free(sub);
 
- /*
-  * Update the subscriptions as needed...
-  */
+  /*
+   * Update the subscriptions as needed...
+   */
 
   if (update)
     cupsdMarkDirty(CUPSD_DIRTY_SUBSCRIPTIONS);
 }
 
-
 /*
  * 'cupsdEventName()' - Return a single event name.
  */
 
-const char *				/* O - Event name */
+const char * /* O - Event name */
 cupsdEventName(
-    cupsd_eventmask_t event)		/* I - Event value */
+    cupsd_eventmask_t event) /* I - Event value */
 {
   switch (event)
   {
-    default :
-	return (NULL);
+  default:
+    return (NULL);
 
-    case CUPSD_EVENT_PRINTER_RESTARTED :
-	return ("printer-restarted");
+  case CUPSD_EVENT_PRINTER_RESTARTED:
+    return ("printer-restarted");
 
-    case CUPSD_EVENT_PRINTER_SHUTDOWN :
-	return ("printer-shutdown");
+  case CUPSD_EVENT_PRINTER_SHUTDOWN:
+    return ("printer-shutdown");
 
-    case CUPSD_EVENT_PRINTER_STOPPED :
-	return ("printer-stopped");
+  case CUPSD_EVENT_PRINTER_STOPPED:
+    return ("printer-stopped");
 
-    case CUPSD_EVENT_PRINTER_FINISHINGS_CHANGED :
-	return ("printer-finishings-changed");
+  case CUPSD_EVENT_PRINTER_FINISHINGS_CHANGED:
+    return ("printer-finishings-changed");
 
-    case CUPSD_EVENT_PRINTER_MEDIA_CHANGED :
-	return ("printer-media-changed");
+  case CUPSD_EVENT_PRINTER_MEDIA_CHANGED:
+    return ("printer-media-changed");
 
-    case CUPSD_EVENT_PRINTER_ADDED :
-	return ("printer-added");
+  case CUPSD_EVENT_PRINTER_ADDED:
+    return ("printer-added");
 
-    case CUPSD_EVENT_PRINTER_DELETED :
-	return ("printer-deleted");
+  case CUPSD_EVENT_PRINTER_DELETED:
+    return ("printer-deleted");
 
-    case CUPSD_EVENT_PRINTER_MODIFIED :
-	return ("printer-modified");
+  case CUPSD_EVENT_PRINTER_MODIFIED:
+    return ("printer-modified");
 
-    case CUPSD_EVENT_PRINTER_QUEUE_ORDER_CHANGED :
-	return ("printer-queue-order-changed");
+  case CUPSD_EVENT_PRINTER_QUEUE_ORDER_CHANGED:
+    return ("printer-queue-order-changed");
 
-    case CUPSD_EVENT_PRINTER_STATE :
-    case CUPSD_EVENT_PRINTER_STATE_CHANGED :
-	return ("printer-state-changed");
+  case CUPSD_EVENT_PRINTER_STATE:
+  case CUPSD_EVENT_PRINTER_STATE_CHANGED:
+    return ("printer-state-changed");
 
-    case CUPSD_EVENT_PRINTER_CONFIG :
-    case CUPSD_EVENT_PRINTER_CONFIG_CHANGED :
-	return ("printer-config-changed");
+  case CUPSD_EVENT_PRINTER_CONFIG:
+  case CUPSD_EVENT_PRINTER_CONFIG_CHANGED:
+    return ("printer-config-changed");
 
-    case CUPSD_EVENT_PRINTER_CHANGED :
-	return ("printer-changed");
+  case CUPSD_EVENT_PRINTER_CHANGED:
+    return ("printer-changed");
 
-    case CUPSD_EVENT_JOB_CREATED :
-	return ("job-created");
+  case CUPSD_EVENT_JOB_CREATED:
+    return ("job-created");
 
-    case CUPSD_EVENT_JOB_COMPLETED :
-	return ("job-completed");
+  case CUPSD_EVENT_JOB_COMPLETED:
+    return ("job-completed");
 
-    case CUPSD_EVENT_JOB_STOPPED :
-	return ("job-stopped");
+  case CUPSD_EVENT_JOB_STOPPED:
+    return ("job-stopped");
 
-    case CUPSD_EVENT_JOB_CONFIG_CHANGED :
-	return ("job-config-changed");
+  case CUPSD_EVENT_JOB_CONFIG_CHANGED:
+    return ("job-config-changed");
 
-    case CUPSD_EVENT_JOB_PROGRESS :
-	return ("job-progress");
+  case CUPSD_EVENT_JOB_PROGRESS:
+    return ("job-progress");
 
-    case CUPSD_EVENT_JOB_STATE :
-    case CUPSD_EVENT_JOB_STATE_CHANGED :
-	return ("job-state-changed");
+  case CUPSD_EVENT_JOB_STATE:
+  case CUPSD_EVENT_JOB_STATE_CHANGED:
+    return ("job-state-changed");
 
-    case CUPSD_EVENT_SERVER_RESTARTED :
-	return ("server-restarted");
+  case CUPSD_EVENT_SERVER_RESTARTED:
+    return ("server-restarted");
 
-    case CUPSD_EVENT_SERVER_STARTED :
-	return ("server-started");
+  case CUPSD_EVENT_SERVER_STARTED:
+    return ("server-started");
 
-    case CUPSD_EVENT_SERVER_STOPPED :
-	return ("server-stopped");
+  case CUPSD_EVENT_SERVER_STOPPED:
+    return ("server-stopped");
 
-    case CUPSD_EVENT_SERVER_AUDIT :
-	return ("server-audit");
+  case CUPSD_EVENT_SERVER_AUDIT:
+    return ("server-audit");
 
-    case CUPSD_EVENT_ALL :
-	return ("all");
+  case CUPSD_EVENT_ALL:
+    return ("all");
   }
 }
-
 
 /*
  * 'cupsdEventValue()' - Return the event mask value for a name.
  */
 
-cupsd_eventmask_t			/* O - Event mask value */
-cupsdEventValue(const char *name)	/* I - Name of event */
+cupsd_eventmask_t                 /* O - Event mask value */
+cupsdEventValue(const char *name) /* I - Name of event */
 {
   if (!strcmp(name, "all"))
     return (CUPSD_EVENT_ALL);
@@ -600,26 +589,23 @@ cupsdEventValue(const char *name)	/* I - Name of event */
     return (CUPSD_EVENT_NONE);
 }
 
-
 /*
  * 'cupsdExpireSubscriptions()' - Expire old subscription objects.
  */
 
-void
-cupsdExpireSubscriptions(
-    cupsd_printer_t *dest,		/* I - Printer, if any */
-    cupsd_job_t	    *job)		/* I - Job, if any */
+void cupsdExpireSubscriptions(
+    cupsd_printer_t *dest, /* I - Printer, if any */
+    cupsd_job_t *job)      /* I - Job, if any */
 {
-  cupsd_subscription_t	*sub;		/* Current subscription */
-  int			update;		/* Update subscriptions.conf? */
-  time_t		curtime;	/* Current time */
-
+  cupsd_subscription_t *sub; /* Current subscription */
+  int update;                /* Update subscriptions.conf? */
+  time_t curtime;            /* Current time */
 
   if (cupsArrayCount(Subscriptions) == 0)
     return;
 
   curtime = time(NULL);
-  update  = 0;
+  update = 0;
 
   cupsdLogMessage(CUPSD_LOG_INFO, "Expiring subscriptions...");
 
@@ -627,11 +613,11 @@ cupsdExpireSubscriptions(
        sub;
        sub = (cupsd_subscription_t *)cupsArrayNext(Subscriptions))
     if ((!sub->job && !dest && sub->expire && sub->expire <= curtime) ||
-	(dest && sub->dest == dest) ||
-	(job && sub->job == job))
+        (dest && sub->dest == dest) ||
+        (job && sub->job == job))
     {
       cupsdLogMessage(CUPSD_LOG_INFO, "Subscription %d has expired...",
-		      sub->id);
+                      sub->id);
 
       cupsdDeleteSubscription(sub, 0);
 
@@ -642,395 +628,388 @@ cupsdExpireSubscriptions(
     cupsdMarkDirty(CUPSD_DIRTY_SUBSCRIPTIONS);
 }
 
-
 /*
  * 'cupsdFindSubscription()' - Find a subscription by ID.
  */
 
-cupsd_subscription_t *			/* O - Subscription object */
-cupsdFindSubscription(int id)		/* I - Subscription ID */
+cupsd_subscription_t *        /* O - Subscription object */
+cupsdFindSubscription(int id) /* I - Subscription ID */
 {
-  cupsd_subscription_t	sub;		/* Subscription template */
-
+  cupsd_subscription_t sub; /* Subscription template */
 
   sub.id = id;
 
   return ((cupsd_subscription_t *)cupsArrayFind(Subscriptions, &sub));
 }
 
-
 /*
  * 'cupsdLoadAllSubscriptions()' - Load all subscriptions from the .conf file.
  */
 
-void
-cupsdLoadAllSubscriptions(void)
+void cupsdLoadAllSubscriptions(void)
 {
-  int			i;		/* Looping var */
-  cups_file_t		*fp;		/* subscriptions.conf file */
-  int			linenum;	/* Current line number */
-  char			line[1024],	/* Line from file */
-			*value,		/* Pointer to value */
-			*valueptr;	/* Pointer into value */
-  cupsd_subscription_t	*sub;		/* Current subscription */
-  int			hex;		/* Non-zero if reading hex data */
-  int			delete_sub;	/* Delete subscription? */
+  int i;                     /* Looping var */
+  cups_file_t *fp;           /* subscriptions.conf file */
+  int linenum;               /* Current line number */
+  char line[1024],           /* Line from file */
+      *value,                /* Pointer to value */
+      *valueptr;             /* Pointer into value */
+  cupsd_subscription_t *sub; /* Current subscription */
+  int hex;                   /* Non-zero if reading hex data */
+  int delete_sub;            /* Delete subscription? */
 
-
- /*
-  * Open the subscriptions.conf file...
-  */
+  /*
+   * Open the subscriptions.conf file...
+   */
 
   snprintf(line, sizeof(line), "%s/subscriptions.conf", ServerRoot);
   if ((fp = cupsdOpenConfFile(line)) == NULL)
     return;
 
- /*
-  * Read all of the lines from the file...
-  */
+  /*
+   * Read all of the lines from the file...
+   */
 
-  linenum    = 0;
-  sub	     = NULL;
+  linenum = 0;
+  sub = NULL;
   delete_sub = 0;
 
   while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
   {
     if (!_cups_strcasecmp(line, "NextSubscriptionId") && value)
     {
-     /*
-      * NextSubscriptionId NNN
-      */
+      /*
+       * NextSubscriptionId NNN
+       */
 
       i = atoi(value);
       if (i >= NextSubscriptionId && i > 0)
-	NextSubscriptionId = i;
+        NextSubscriptionId = i;
     }
     else if (!_cups_strcasecmp(line, "<Subscription"))
     {
-     /*
-      * <Subscription #>
-      */
+      /*
+       * <Subscription #>
+       */
 
       if (!sub && value && isdigit(value[0] & 255))
       {
-	sub = cupsdAddSubscription(CUPSD_EVENT_NONE, NULL, NULL, NULL,
-				   atoi(value));
+        sub = cupsdAddSubscription(CUPSD_EVENT_NONE, NULL, NULL, NULL,
+                                   atoi(value));
       }
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "</Subscription>"))
     {
       if (!sub)
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
 
       if (delete_sub)
-	cupsdDeleteSubscription(sub, 0);
+        cupsdDeleteSubscription(sub, 0);
 
-      sub	 = NULL;
+      sub = NULL;
       delete_sub = 0;
     }
     else if (!sub)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR,
-		      "Syntax error on line %d of subscriptions.conf.",
-		      linenum);
+                      "Syntax error on line %d of subscriptions.conf.",
+                      linenum);
     }
     else if (!_cups_strcasecmp(line, "Events"))
     {
-     /*
-      * Events name
-      * Events name name name ...
-      */
+      /*
+       * Events name
+       * Events name name name ...
+       */
 
       if (!value)
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
 
       while (*value)
       {
-       /*
-	* Separate event names...
-	*/
+        /*
+         * Separate event names...
+         */
 
-	for (valueptr = value; !isspace(*valueptr) && *valueptr; valueptr ++);
+        for (valueptr = value; !isspace(*valueptr) && *valueptr; valueptr++)
+          ;
 
-	while (isspace(*valueptr & 255))
-	  *valueptr++ = '\0';
+        while (isspace(*valueptr & 255))
+          *valueptr++ = '\0';
 
-       /*
-	* See if the name exists...
-	*/
+        /*
+         * See if the name exists...
+         */
 
-	if ((sub->mask |= cupsdEventValue(value)) == CUPSD_EVENT_NONE)
-	{
-	  cupsdLogMessage(CUPSD_LOG_ERROR,
-			  "Unknown event name \'%s\' on line %d of subscriptions.conf.",
-			  value, linenum);
-	  break;
-	}
+        if ((sub->mask |= cupsdEventValue(value)) == CUPSD_EVENT_NONE)
+        {
+          cupsdLogMessage(CUPSD_LOG_ERROR,
+                          "Unknown event name \'%s\' on line %d of subscriptions.conf.",
+                          value, linenum);
+          break;
+        }
 
-	value = valueptr;
+        value = valueptr;
       }
     }
     else if (!_cups_strcasecmp(line, "Owner"))
     {
-     /*
-      * Owner
-      */
+      /*
+       * Owner
+       */
 
       if (value)
-	cupsdSetString(&sub->owner, value);
+        cupsdSetString(&sub->owner, value);
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "Recipient"))
     {
-     /*
-      * Recipient uri
-      */
+      /*
+       * Recipient uri
+       */
 
       if (value)
-	cupsdSetString(&sub->recipient, value);
+        cupsdSetString(&sub->recipient, value);
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "JobId"))
     {
-     /*
-      * JobId #
-      */
+      /*
+       * JobId #
+       */
 
       if (value && isdigit(*value & 255))
       {
-	if ((sub->job = cupsdFindJob(atoi(value))) == NULL)
-	{
-	  cupsdLogMessage(CUPSD_LOG_ERROR,
-			  "Job %s not found on line %d of subscriptions.conf.",
-			  value, linenum);
-	  delete_sub = 1;
-	}
+        if ((sub->job = cupsdFindJob(atoi(value))) == NULL)
+        {
+          cupsdLogMessage(CUPSD_LOG_ERROR,
+                          "Job %s not found on line %d of subscriptions.conf.",
+                          value, linenum);
+          delete_sub = 1;
+        }
       }
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "PrinterName"))
     {
-     /*
-      * PrinterName name
-      */
+      /*
+       * PrinterName name
+       */
 
       if (value)
       {
-	if ((sub->dest = cupsdFindDest(value)) == NULL)
-	{
-	  cupsdLogMessage(CUPSD_LOG_ERROR,
-			  "Printer \'%s\' not found on line %d of subscriptions.conf.",
-			  value, linenum);
-	  delete_sub = 1;
-	}
+        if ((sub->dest = cupsdFindDest(value)) == NULL)
+        {
+          cupsdLogMessage(CUPSD_LOG_ERROR,
+                          "Printer \'%s\' not found on line %d of subscriptions.conf.",
+                          value, linenum);
+          delete_sub = 1;
+        }
       }
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "UserData"))
     {
-     /*
-      * UserData encoded-string
-      */
+      /*
+       * UserData encoded-string
+       */
 
       if (value)
       {
-	for (i = 0, valueptr = value, hex = 0; i < 63 && *valueptr; i ++)
-	{
-	  if (*valueptr == '<' && !hex)
-	  {
-	    hex = 1;
-	    valueptr ++;
-	  }
+        for (i = 0, valueptr = value, hex = 0; i < 63 && *valueptr; i++)
+        {
+          if (*valueptr == '<' && !hex)
+          {
+            hex = 1;
+            valueptr++;
+          }
 
-	  if (hex)
-	  {
-	    if (isxdigit(valueptr[0]) && isxdigit(valueptr[1]))
-	    {
-	      if (isdigit(valueptr[0]))
-		sub->user_data[i] = (unsigned char)((valueptr[0] - '0') << 4);
-	      else
-		sub->user_data[i] = (unsigned char)((tolower(valueptr[0]) - 'a' + 10) << 4);
+          if (hex)
+          {
+            if (isxdigit(valueptr[0]) && isxdigit(valueptr[1]))
+            {
+              if (isdigit(valueptr[0]))
+                sub->user_data[i] = (unsigned char)((valueptr[0] - '0') << 4);
+              else
+                sub->user_data[i] = (unsigned char)((tolower(valueptr[0]) - 'a' + 10) << 4);
 
-	      if (isdigit(valueptr[1]))
-		sub->user_data[i] |= valueptr[1] - '0';
-	      else
-		sub->user_data[i] |= tolower(valueptr[1]) - 'a' + 10;
+              if (isdigit(valueptr[1]))
+                sub->user_data[i] |= valueptr[1] - '0';
+              else
+                sub->user_data[i] |= tolower(valueptr[1]) - 'a' + 10;
 
-	      valueptr += 2;
+              valueptr += 2;
 
-	      if (*valueptr == '>')
-	      {
-		hex = 0;
-		valueptr ++;
-	      }
-	    }
-	    else
-	      break;
-	  }
-	  else
-	    sub->user_data[i] = (unsigned char)*valueptr++;
-	}
+              if (*valueptr == '>')
+              {
+                hex = 0;
+                valueptr++;
+              }
+            }
+            else
+              break;
+          }
+          else
+            sub->user_data[i] = (unsigned char)*valueptr++;
+        }
 
-	if (*valueptr)
-	{
-	  cupsdLogMessage(CUPSD_LOG_ERROR,
-			  "Bad UserData \'%s\' on line %d of subscriptions.conf.",
-			  value, linenum);
-	}
-	else
-	  sub->user_data_len = i;
+        if (*valueptr)
+        {
+          cupsdLogMessage(CUPSD_LOG_ERROR,
+                          "Bad UserData \'%s\' on line %d of subscriptions.conf.",
+                          value, linenum);
+        }
+        else
+          sub->user_data_len = i;
       }
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "LeaseDuration"))
     {
-     /*
-      * LeaseDuration #
-      */
+      /*
+       * LeaseDuration #
+       */
 
       if (value && isdigit(*value & 255))
       {
-	sub->lease  = atoi(value);
-	sub->expire = sub->lease ? time(NULL) + sub->lease : 0;
+        sub->lease = atoi(value);
+        sub->expire = sub->lease ? time(NULL) + sub->lease : 0;
       }
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "Interval"))
     {
-     /*
-      * Interval #
-      */
+      /*
+       * Interval #
+       */
 
       if (value && isdigit(*value & 255))
-	sub->interval = atoi(value);
+        sub->interval = atoi(value);
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "ExpirationTime"))
     {
-     /*
-      * ExpirationTime #
-      */
+      /*
+       * ExpirationTime #
+       */
 
       if (value && isdigit(*value & 255))
-	sub->expire = atoi(value);
+        sub->expire = atoi(value);
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else if (!_cups_strcasecmp(line, "NextEventId"))
     {
-     /*
-      * NextEventId #
-      */
+      /*
+       * NextEventId #
+       */
 
       if (value && isdigit(*value & 255))
-	sub->next_event_id = sub->first_event_id = atoi(value);
+        sub->next_event_id = sub->first_event_id = atoi(value);
       else
       {
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Syntax error on line %d of subscriptions.conf.",
-			linenum);
-	break;
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Syntax error on line %d of subscriptions.conf.",
+                        linenum);
+        break;
       }
     }
     else
     {
-     /*
-      * Something else we don't understand...
-      */
+      /*
+       * Something else we don't understand...
+       */
 
       cupsdLogMessage(CUPSD_LOG_ERROR,
-		      "Unknown configuration directive %s on line %d of subscriptions.conf.",
-		      line, linenum);
+                      "Unknown configuration directive %s on line %d of subscriptions.conf.",
+                      line, linenum);
     }
   }
 
   cupsFileClose(fp);
 }
 
-
 /*
  * 'cupsdSaveAllSubscriptions()' - Save all subscriptions to the .conf file.
  */
 
-void
-cupsdSaveAllSubscriptions(void)
+void cupsdSaveAllSubscriptions(void)
 {
-  int			i;		/* Looping var */
-  cups_file_t		*fp;		/* subscriptions.conf file */
-  char			filename[1024]; /* subscriptions.conf filename */
-  cupsd_subscription_t	*sub;		/* Current subscription */
-  unsigned		mask;		/* Current event mask */
-  const char		*name;		/* Current event name */
-  int			hex;		/* Non-zero if we are writing hex data */
+  int i;                     /* Looping var */
+  cups_file_t *fp;           /* subscriptions.conf file */
+  char filename[1024];       /* subscriptions.conf filename */
+  cupsd_subscription_t *sub; /* Current subscription */
+  unsigned mask;             /* Current event mask */
+  const char *name;          /* Current event name */
+  int hex;                   /* Non-zero if we are writing hex data */
 
-
- /*
-  * Create the subscriptions.conf file...
-  */
+  /*
+   * Create the subscriptions.conf file...
+   */
 
   snprintf(filename, sizeof(filename), "%s/subscriptions.conf", ServerRoot);
 
@@ -1039,18 +1018,18 @@ cupsdSaveAllSubscriptions(void)
 
   cupsdLogMessage(CUPSD_LOG_INFO, "Saving subscriptions.conf...");
 
- /*
-  * Write a small header to the file...
-  */
+  /*
+   * Write a small header to the file...
+   */
 
   cupsFilePuts(fp, "# Subscription configuration file for " CUPS_SVERSION "\n");
   cupsFilePrintf(fp, "# Written by cupsd\n");
 
   cupsFilePrintf(fp, "NextSubscriptionId %d\n", NextSubscriptionId);
 
- /*
-  * Write every subscription known to the system...
-  */
+  /*
+   * Write every subscription known to the system...
+   */
 
   for (sub = (cupsd_subscription_t *)cupsArrayFirst(Subscriptions);
        sub;
@@ -1060,23 +1039,23 @@ cupsdSaveAllSubscriptions(void)
 
     if ((name = cupsdEventName((cupsd_eventmask_t)sub->mask)) != NULL)
     {
-     /*
-      * Simple event list...
-      */
+      /*
+       * Simple event list...
+       */
 
       cupsFilePrintf(fp, "Events %s\n", name);
     }
     else
     {
-     /*
-      * Complex event list...
-      */
+      /*
+       * Complex event list...
+       */
 
       cupsFilePuts(fp, "Events");
 
       for (mask = 1; mask < CUPSD_EVENT_ALL; mask <<= 1)
-	if (sub->mask & mask)
-	  cupsFilePrintf(fp, " %s", cupsdEventName((cupsd_eventmask_t)mask));
+        if (sub->mask & mask)
+          cupsFilePrintf(fp, " %s", cupsdEventName((cupsd_eventmask_t)mask));
 
       cupsFilePuts(fp, "\n");
     }
@@ -1094,36 +1073,36 @@ cupsdSaveAllSubscriptions(void)
     {
       cupsFilePuts(fp, "UserData ");
 
-      for (i = 0, hex = 0; i < sub->user_data_len; i ++)
+      for (i = 0, hex = 0; i < sub->user_data_len; i++)
       {
-	if (sub->user_data[i] < ' ' ||
-	    sub->user_data[i] > 0x7f ||
-	    sub->user_data[i] == '<')
-	{
-	  if (!hex)
-	  {
-	    cupsFilePrintf(fp, "<%02X", sub->user_data[i]);
-	    hex = 1;
-	  }
-	  else
-	    cupsFilePrintf(fp, "%02X", sub->user_data[i]);
-	}
-	else
-	{
-	  if (hex)
-	  {
-	    cupsFilePrintf(fp, ">%c", sub->user_data[i]);
-	    hex = 0;
-	  }
-	  else
-	    cupsFilePutChar(fp, sub->user_data[i]);
-	}
+        if (sub->user_data[i] < ' ' ||
+            sub->user_data[i] > 0x7f ||
+            sub->user_data[i] == '<')
+        {
+          if (!hex)
+          {
+            cupsFilePrintf(fp, "<%02X", sub->user_data[i]);
+            hex = 1;
+          }
+          else
+            cupsFilePrintf(fp, "%02X", sub->user_data[i]);
+        }
+        else
+        {
+          if (hex)
+          {
+            cupsFilePrintf(fp, ">%c", sub->user_data[i]);
+            hex = 0;
+          }
+          else
+            cupsFilePutChar(fp, sub->user_data[i]);
+        }
       }
 
       if (hex)
-	cupsFilePuts(fp, ">\n");
+        cupsFilePuts(fp, ">\n");
       else
-	cupsFilePutChar(fp, '\n');
+        cupsFilePutChar(fp, '\n');
     }
 
     cupsFilePrintf(fp, "LeaseDuration %d\n", sub->lease);
@@ -1137,27 +1116,24 @@ cupsdSaveAllSubscriptions(void)
   cupsdCloseCreatedConfFile(fp, filename);
 }
 
-
 /*
  * 'cupsdStopAllNotifiers()' - Stop all notifier processes.
  */
 
-void
-cupsdStopAllNotifiers(void)
+void cupsdStopAllNotifiers(void)
 {
-  cupsd_subscription_t	*sub;		/* Current subscription */
+  cupsd_subscription_t *sub; /* Current subscription */
 
-
- /*
-  * See if we have started any notifiers...
-  */
+  /*
+   * See if we have started any notifiers...
+   */
 
   if (!NotifierStatusBuffer)
     return;
 
- /*
-  * Yes, kill any processes that are left...
-  */
+  /*
+   * Yes, kill any processes that are left...
+   */
 
   for (sub = (cupsd_subscription_t *)cupsArrayFirst(Subscriptions);
        sub;
@@ -1170,9 +1146,9 @@ cupsdStopAllNotifiers(void)
       sub->pipe = -1;
     }
 
- /*
-  * Close the status pipes...
-  */
+  /*
+   * Close the status pipes...
+   */
 
   if (NotifierPipes[0] >= 0)
   {
@@ -1189,22 +1165,20 @@ cupsdStopAllNotifiers(void)
   }
 }
 
-
 /*
  * 'cupsd_compare_subscriptions()' - Compare two subscriptions.
  */
 
-static int				/* O - Result of comparison */
+static int /* O - Result of comparison */
 cupsd_compare_subscriptions(
-    cupsd_subscription_t *first,	/* I - First subscription object */
-    cupsd_subscription_t *second,	/* I - Second subscription object */
-    void		 *unused)	/* I - Unused user data pointer */
+    cupsd_subscription_t *first,  /* I - First subscription object */
+    cupsd_subscription_t *second, /* I - Second subscription object */
+    void *unused)                 /* I - Unused user data pointer */
 {
   (void)unused;
 
   return (first->id - second->id);
 }
-
 
 /*
  * 'cupsd_delete_event()' - Delete a single event...
@@ -1214,16 +1188,15 @@ cupsd_compare_subscriptions(
  */
 
 static void
-cupsd_delete_event(cupsd_event_t *event)/* I - Event to delete */
+cupsd_delete_event(cupsd_event_t *event) /* I - Event to delete */
 {
- /*
-  * Free memory...
-  */
+  /*
+   * Free memory...
+   */
 
   ippDelete(event->attrs);
   free(event);
 }
-
 
 #ifdef HAVE_DBUS
 /*
@@ -1231,20 +1204,19 @@ cupsd_delete_event(cupsd_event_t *event)/* I - Event to delete */
  */
 
 static void
-cupsd_send_dbus(cupsd_eventmask_t event,/* I - Event to send */
-		cupsd_printer_t	  *dest,/* I - Destination, if any */
-		cupsd_job_t	  *job) /* I - Job, if any */
+cupsd_send_dbus(cupsd_eventmask_t event, /* I - Event to send */
+                cupsd_printer_t *dest,   /* I - Destination, if any */
+                cupsd_job_t *job)        /* I - Job, if any */
 {
-  DBusError		error;		/* Error, if any */
-  DBusMessage		*message;	/* Message to send */
-  DBusMessageIter	iter;		/* Iterator for message data */
-  const char		*what;		/* What to send */
-  static DBusConnection *con = NULL;	/* Connection to DBUS server */
+  DBusError error;                   /* Error, if any */
+  DBusMessage *message;              /* Message to send */
+  DBusMessageIter iter;              /* Iterator for message data */
+  const char *what;                  /* What to send */
+  static DBusConnection *con = NULL; /* Connection to DBUS server */
 
-
- /*
-  * Figure out what to send, if anything...
-  */
+  /*
+   * Figure out what to send, if anything...
+   */
 
   if (event & CUPSD_EVENT_PRINTER_ADDED)
     what = "PrinterAdded";
@@ -1255,14 +1227,14 @@ cupsd_send_dbus(cupsd_eventmask_t event,/* I - Event to send */
   else if (event & CUPSD_EVENT_JOB_CREATED)
     what = "JobQueuedLocal";
   else if ((event & CUPSD_EVENT_JOB_STATE) && job &&
-	   job->state_value == IPP_JOB_PROCESSING)
+           job->state_value == IPP_JOB_PROCESSING)
     what = "JobStartedLocal";
   else
     return;
 
- /*
-  * Verify connection to DBUS server...
-  */
+  /*
+   * Verify connection to DBUS server...
+   */
 
   if (con && !dbus_connection_get_is_connected(con))
   {
@@ -1282,12 +1254,12 @@ cupsd_send_dbus(cupsd_eventmask_t event,/* I - Event to send */
     }
   }
 
- /*
-  * Create and send the new message...
-  */
+  /*
+   * Create and send the new message...
+   */
 
   message = dbus_message_new_signal("/com/redhat/PrinterSpooler",
-				    "com.redhat.PrinterSpooler", what);
+                                    "com.redhat.PrinterSpooler", what);
 
   dbus_message_append_iter_init(message, &iter);
   if (dest)
@@ -1304,128 +1276,125 @@ cupsd_send_dbus(cupsd_eventmask_t event,/* I - Event to send */
 }
 #endif /* HAVE_DBUS */
 
-
 /*
  * 'cupsd_send_notification()' - Send a notification for the specified event.
  */
 
 static void
 cupsd_send_notification(
-    cupsd_subscription_t *sub,		/* I - Subscription object */
-    cupsd_event_t	 *event)	/* I - Event to send */
+    cupsd_subscription_t *sub, /* I - Subscription object */
+    cupsd_event_t *event)      /* I - Event to send */
 {
-  ipp_state_t	state;			/* IPP event state */
-
+  ipp_state_t state; /* IPP event state */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG2,
-		  "cupsd_send_notification(sub=%p(%d), event=%p(%s))",
-		  sub, sub->id, event, cupsdEventName(event->event));
+                  "cupsd_send_notification(sub=%p(%d), event=%p(%s))",
+                  sub, sub->id, event, cupsdEventName(event->event));
 
- /*
-  * Allocate the events array as needed...
-  */
+  /*
+   * Allocate the events array as needed...
+   */
 
   if (!sub->events)
   {
     sub->events = cupsArrayNew3((cups_array_func_t)NULL, NULL,
-				(cups_ahash_func_t)NULL, 0,
-				(cups_acopy_func_t)NULL,
-				(cups_afree_func_t)cupsd_delete_event);
+                                (cups_ahash_func_t)NULL, 0,
+                                (cups_acopy_func_t)NULL,
+                                (cups_afree_func_t)cupsd_delete_event);
 
     if (!sub->events)
     {
       cupsdLogMessage(CUPSD_LOG_CRIT,
-		      "Unable to allocate memory for subscription #%d!",
-		      sub->id);
+                      "Unable to allocate memory for subscription #%d!",
+                      sub->id);
       return;
     }
   }
 
- /*
-  * Purge an old event as needed...
-  */
+  /*
+   * Purge an old event as needed...
+   */
 
   if (cupsArrayCount(sub->events) >= MaxEvents)
   {
-   /*
-    * Purge the oldest event in the cache...
-    */
+    /*
+     * Purge the oldest event in the cache...
+     */
 
     cupsArrayRemove(sub->events, cupsArrayFirst(sub->events));
 
-    sub->first_event_id ++;
+    sub->first_event_id++;
   }
 
- /*
-  * Add the event to the subscription.	Since the events array is
-  * always MaxEvents in length, and since we will have already
-  * removed an event from the subscription cache if we hit the
-  * event cache limit, we don't need to check for overflow here...
-  */
+  /*
+   * Add the event to the subscription.	Since the events array is
+   * always MaxEvents in length, and since we will have already
+   * removed an event from the subscription cache if we hit the
+   * event cache limit, we don't need to check for overflow here...
+   */
 
   cupsArrayAdd(sub->events, event);
 
- /*
-  * Deliver the event...
-  */
+  /*
+   * Deliver the event...
+   */
 
   if (sub->recipient)
   {
     for (;;)
     {
       if (sub->pipe < 0)
-	cupsd_start_notifier(sub);
+        cupsd_start_notifier(sub);
 
       cupsdLogMessage(CUPSD_LOG_DEBUG2, "sub->pipe=%d", sub->pipe);
 
       if (sub->pipe < 0)
-	break;
+        break;
 
       event->attrs->state = IPP_IDLE;
 
       while ((state = ippWriteFile(sub->pipe, event->attrs)) != IPP_DATA)
-	if (state == IPP_ERROR)
-	  break;
+        if (state == IPP_ERROR)
+          break;
 
       if (state == IPP_ERROR)
       {
-	if (errno == EPIPE)
-	{
-	 /*
-	  * Notifier died, try restarting it...
-	  */
+        if (errno == EPIPE)
+        {
+          /*
+           * Notifier died, try restarting it...
+           */
 
-	  cupsdLogMessage(CUPSD_LOG_WARN,
-			  "Notifier for subscription %d (%s) went away, "
-			  "retrying!",
-			  sub->id, sub->recipient);
-	  cupsdEndProcess(sub->pid, 0);
+          cupsdLogMessage(CUPSD_LOG_WARN,
+                          "Notifier for subscription %d (%s) went away, "
+                          "retrying!",
+                          sub->id, sub->recipient);
+          cupsdEndProcess(sub->pid, 0);
 
-	  close(sub->pipe);
-	  sub->pipe = -1;
-	  continue;
-	}
+          close(sub->pipe);
+          sub->pipe = -1;
+          continue;
+        }
 
-	cupsdLogMessage(CUPSD_LOG_ERROR,
-			"Unable to send event for subscription %d (%s)!",
-			sub->id, sub->recipient);
+        cupsdLogMessage(CUPSD_LOG_ERROR,
+                        "Unable to send event for subscription %d (%s)!",
+                        sub->id, sub->recipient);
       }
 
-     /*
-      * If we get this far, break out of the loop...
-      */
+      /*
+       * If we get this far, break out of the loop...
+       */
 
       break;
     }
   }
 
- /*
-  * Bump the event sequence number...
-  */
+  /*
+   * Bump the event sequence number...
+   */
 
-  sub->next_event_id ++;
+  sub->next_event_id++;
 }
-
 
 /*
  * 'cupsd_start_notifier()' - Start a notifier subprocess...
@@ -1433,22 +1402,21 @@ cupsd_send_notification(
 
 static void
 cupsd_start_notifier(
-    cupsd_subscription_t *sub)		/* I - Subscription object */
+    cupsd_subscription_t *sub) /* I - Subscription object */
 {
-  int	pid;				/* Notifier process ID */
-  int	fds[2];				/* Pipe file descriptors */
-  char	*argv[4],			/* Command-line arguments */
-	*envp[MAX_ENV],			/* Environment variables */
-	user_data[128],			/* Base-64 encoded user data */
-	scheme[256],			/* notify-recipient-uri scheme */
-	*ptr,				/* Pointer into scheme */
-	command[1024];			/* Notifier command */
+  int pid;            /* Notifier process ID */
+  int fds[2];         /* Pipe file descriptors */
+  char *argv[4],      /* Command-line arguments */
+      *envp[MAX_ENV], /* Environment variables */
+      user_data[128], /* Base-64 encoded user data */
+      scheme[256],    /* notify-recipient-uri scheme */
+      *ptr,           /* Pointer into scheme */
+      command[1024];  /* Notifier command */
 
-
- /*
-  * Extract the scheme name from the recipient URI and point to the
-  * notifier program...
-  */
+  /*
+   * Extract the scheme name from the recipient URI and point to the
+   * notifier program...
+   */
 
   strlcpy(scheme, sub->recipient, sizeof(scheme));
   if ((ptr = strchr(scheme, ':')) != NULL)
@@ -1456,113 +1424,110 @@ cupsd_start_notifier(
 
   snprintf(command, sizeof(command), "%s/notifier/%s", ServerBin, scheme);
 
- /*
-  * Base-64 encode the user data...
-  */
+  /*
+   * Base-64 encode the user data...
+   */
 
   httpEncode64_2(user_data, sizeof(user_data), (char *)sub->user_data,
-		 sub->user_data_len);
+                 sub->user_data_len);
 
- /*
-  * Setup the argument array...
-  */
+  /*
+   * Setup the argument array...
+   */
 
   argv[0] = command;
   argv[1] = sub->recipient;
   argv[2] = user_data;
   argv[3] = NULL;
 
- /*
-  * Setup the environment...
-  */
+  /*
+   * Setup the environment...
+   */
 
   cupsdLoadEnv(envp, (int)(sizeof(envp) / sizeof(envp[0])));
 
- /*
-  * Create pipes as needed...
-  */
+  /*
+   * Create pipes as needed...
+   */
 
   if (!NotifierStatusBuffer)
   {
-   /*
-    * Create the status pipe...
-    */
+    /*
+     * Create the status pipe...
+     */
 
     if (cupsdOpenPipe(NotifierPipes))
     {
       cupsdLogMessage(CUPSD_LOG_ERROR,
-		      "Unable to create pipes for notifier status - %s",
-		      strerror(errno));
+                      "Unable to create pipes for notifier status - %s",
+                      strerror(errno));
       return;
     }
 
     NotifierStatusBuffer = cupsdStatBufNew(NotifierPipes[0], "[Notifier]");
 
     cupsdAddSelect(NotifierPipes[0], (cupsd_selfunc_t)cupsd_update_notifier,
-		   NULL, NULL);
+                   NULL, NULL);
   }
 
   if (cupsdOpenPipe(fds))
   {
     cupsdLogMessage(CUPSD_LOG_ERROR,
-		    "Unable to create pipes for notifier %s - %s",
-		    scheme, strerror(errno));
+                    "Unable to create pipes for notifier %s - %s",
+                    scheme, strerror(errno));
     return;
   }
 
- /*
-  * Make sure the delivery pipe is non-blocking...
-  */
+  /*
+   * Make sure the delivery pipe is non-blocking...
+   */
 
   fcntl(fds[1], F_SETFL, fcntl(fds[1], F_GETFL) | O_NONBLOCK);
 
- /*
-  * Create the notifier process...
-  */
+  /*
+   * Create the notifier process...
+   */
 
   if (cupsdStartProcess(command, argv, envp, fds[0], -1, NotifierPipes[1],
-			-1, -1, 0, DefaultProfile, NULL, &pid) < 0)
+                        -1, -1, 0, DefaultProfile, NULL, &pid) < 0)
   {
-   /*
-    * Error - can't fork!
-    */
+    /*
+     * Error - can't fork!
+     */
 
     cupsdLogMessage(CUPSD_LOG_ERROR, "Unable to fork for notifier %s - %s",
-		    scheme, strerror(errno));
+                    scheme, strerror(errno));
 
     cupsdClosePipe(fds);
   }
   else
   {
-   /*
-    * Fork successful - return the PID...
-    */
+    /*
+     * Fork successful - return the PID...
+     */
 
     cupsdLogMessage(CUPSD_LOG_DEBUG, "Notifier %s started - PID = %d",
-		    scheme, pid);
+                    scheme, pid);
 
-    sub->pid	= pid;
-    sub->pipe	= fds[1];
+    sub->pid = pid;
+    sub->pipe = fds[1];
     sub->status = 0;
 
     close(fds[0]);
   }
 }
 
-
 /*
  * 'cupsd_update_notifier()' - Read messages from notifiers.
  */
 
-void
-cupsd_update_notifier(void)
+void cupsd_update_notifier(void)
 {
-  char		message[1024];		/* Pointer to message text */
-  int		loglevel;		/* Log level for message */
-
+  char message[1024]; /* Pointer to message text */
+  int loglevel;       /* Log level for message */
 
   while (cupsdStatBufUpdate(NotifierStatusBuffer, &loglevel,
-			    message, sizeof(message)))
+                            message, sizeof(message)))
   {
     if (loglevel == CUPSD_LOG_INFO)
       cupsdLogMessage(CUPSD_LOG_INFO, "%s", message);

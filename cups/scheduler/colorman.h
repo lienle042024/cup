@@ -11,7 +11,7 @@
  * Prototypes...
  */
 
-extern void	cupsdRegisterColor(cupsd_printer_t *p);
-extern void	cupsdStartColor(void);
-extern void	cupsdStopColor(void);
-extern void	cupsdUnregisterColor(cupsd_printer_t *p);
+extern void cupsdRegisterColor(cupsd_printer_t *p);
+extern void cupsdStartColor(void);
+extern void cupsdStopColor(void);
+extern void cupsdUnregisterColor(cupsd_printer_t *p);

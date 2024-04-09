@@ -13,17 +13,16 @@
 
 #include "cgi.h"
 
-
 /*
  * 'main()' - Test the CGI code.
  */
 
-int					/* O - Exit status */
+int /* O - Exit status */
 main(void)
 {
- /*
-  * Test file upload/multi-part submissions...
-  */
+  /*
+   * Test file upload/multi-part submissions...
+   */
 
   freopen("multipart.dat", "rb", stdin);
 
@@ -34,7 +33,7 @@ main(void)
   printf("cgiInitialize: ");
   if (cgiInitialize())
   {
-    const cgi_file_t	*file;		/* Upload file */
+    const cgi_file_t *file; /* Upload file */
 
     if ((file = cgiGetFile()) != NULL)
     {
@@ -50,9 +49,9 @@ main(void)
   else
     puts("FAIL (init)");
 
- /*
-  * Return with no errors...
-  */
+  /*
+   * Return with no errors...
+   */
 
   return (0);
 }

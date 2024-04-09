@@ -13,36 +13,33 @@
 
 #include "cupsd.h"
 
-
 /*
  * Local functions...
  */
 
-static cupsd_quota_t	*add_quota(cupsd_printer_t *p, const char *username);
-static int		compare_quotas(const cupsd_quota_t *q1,
-			               const cupsd_quota_t *q2);
-
+static cupsd_quota_t *add_quota(cupsd_printer_t *p, const char *username);
+static int compare_quotas(const cupsd_quota_t *q1,
+                          const cupsd_quota_t *q2);
 
 /*
  * 'cupsdFindQuota()' - Find a quota record.
  */
 
-cupsd_quota_t *				/* O - Quota data */
+cupsd_quota_t * /* O - Quota data */
 cupsdFindQuota(
-    cupsd_printer_t *p,			/* I - Printer */
-    const char      *username)		/* I - User */
+    cupsd_printer_t *p,   /* I - Printer */
+    const char *username) /* I - User */
 {
-  cupsd_quota_t	*q,			/* Quota data pointer */
-		match;			/* Search data */
-  char		*ptr;			/* Pointer into username */
-
+  cupsd_quota_t *q, /* Quota data pointer */
+      match;        /* Search data */
+  char *ptr;        /* Pointer into username */
 
   if (!p || !username)
     return (NULL);
 
   strlcpy(match.username, username, sizeof(match.username));
   if ((ptr = strchr(match.username, '@')) != NULL)
-    *ptr = '\0';			/* Strip @domain/@KDC */
+    *ptr = '\0'; /* Strip @domain/@KDC */
 
   if ((q = (cupsd_quota_t *)cupsArrayFind(p->quotas, &match)) != NULL)
     return (q);
@@ -50,16 +47,13 @@ cupsdFindQuota(
     return (add_quota(p, username));
 }
 
-
 /*
  * 'cupsdFreeQuotas()' - Free quotas for a printer.
  */
 
-void
-cupsdFreeQuotas(cupsd_printer_t *p)	/* I - Printer */
+void cupsdFreeQuotas(cupsd_printer_t *p) /* I - Printer */
 {
-  cupsd_quota_t *q;			/* Current quota record */
-
+  cupsd_quota_t *q; /* Current quota record */
 
   if (!p)
     return;
@@ -74,23 +68,21 @@ cupsdFreeQuotas(cupsd_printer_t *p)	/* I - Printer */
   p->quotas = NULL;
 }
 
-
 /*
  * 'cupsdUpdateQuota()' - Update quota data for the specified printer and user.
  */
 
-cupsd_quota_t *				/* O - Quota data */
+cupsd_quota_t * /* O - Quota data */
 cupsdUpdateQuota(
-    cupsd_printer_t *p,			/* I - Printer */
-    const char      *username,		/* I - User */
-    int             pages,		/* I - Number of pages */
-    int             k)			/* I - Number of kilobytes */
+    cupsd_printer_t *p,   /* I - Printer */
+    const char *username, /* I - User */
+    int pages,            /* I - Number of pages */
+    int k)                /* I - Number of kilobytes */
 {
-  cupsd_quota_t		*q;		/* Quota data */
-  cupsd_job_t		*job;		/* Current job */
-  time_t		curtime;	/* Current time */
-  ipp_attribute_t	*attr;		/* Job attribute */
-
+  cupsd_quota_t *q;      /* Quota data */
+  cupsd_job_t *job;      /* Current job */
+  time_t curtime;        /* Current time */
+  ipp_attribute_t *attr; /* Job attribute */
 
   if (!p || !username)
     return (NULL);
@@ -110,7 +102,7 @@ cupsdUpdateQuota(
   if (curtime < q->next_update)
   {
     q->page_count += pages;
-    q->k_count    += k;
+    q->k_count += k;
 
     return (q);
   }
@@ -121,25 +113,25 @@ cupsdUpdateQuota(
     curtime = 0;
 
   q->next_update = 0;
-  q->page_count  = 0;
-  q->k_count     = 0;
+  q->page_count = 0;
+  q->k_count = 0;
 
   for (job = (cupsd_job_t *)cupsArrayFirst(Jobs);
        job;
        job = (cupsd_job_t *)cupsArrayNext(Jobs))
   {
-   /*
-    * We only care about the current printer/class and user...
-    */
+    /*
+     * We only care about the current printer/class and user...
+     */
 
     if (_cups_strcasecmp(job->dest, p->name) != 0 ||
         _cups_strcasecmp(job->username, q->username) != 0)
       continue;
 
-   /*
-    * Make sure attributes are loaded; we always call cupsdLoadJob() to ensure
-    * the access_time member is updated so the job isn't unloaded right away...
-    */
+    /*
+     * Make sure attributes are loaded; we always call cupsdLoadJob() to ensure
+     * the access_time member is updated so the job isn't unloaded right away...
+     */
 
     if (!cupsdLoadJob(job))
       continue;
@@ -153,9 +145,9 @@ cupsdUpdateQuota(
 
     if (attr->values[0].integer < curtime)
     {
-     /*
-      * This job is too old to count towards the quota, ignore it...
-      */
+      /*
+       * This job is too old to count towards the quota, ignore it...
+       */
 
       if (JobAutoPurge && !job->printer && job->state_value > IPP_JOB_STOPPED)
         cupsdDeleteJob(job, CUPSD_JOB_PURGE);
@@ -178,18 +170,16 @@ cupsdUpdateQuota(
   return (q);
 }
 
-
 /*
  * 'add_quota()' - Add a quota record for this printer and user.
  */
 
-static cupsd_quota_t *			/* O - Quota data */
-add_quota(cupsd_printer_t *p,		/* I - Printer */
-          const char      *username)	/* I - User */
+static cupsd_quota_t *          /* O - Quota data */
+add_quota(cupsd_printer_t *p,   /* I - Printer */
+          const char *username) /* I - User */
 {
-  cupsd_quota_t	*q;			/* New quota data */
-  char		*ptr;			/* Pointer into username */
-
+  cupsd_quota_t *q; /* New quota data */
+  char *ptr;        /* Pointer into username */
 
   if (!p || !username)
     return (NULL);
@@ -205,21 +195,20 @@ add_quota(cupsd_printer_t *p,		/* I - Printer */
 
   strlcpy(q->username, username, sizeof(q->username));
   if ((ptr = strchr(q->username, '@')) != NULL)
-    *ptr = '\0';			/* Strip @domain/@KDC */
+    *ptr = '\0'; /* Strip @domain/@KDC */
 
   cupsArrayAdd(p->quotas, q);
 
   return (q);
 }
 
-
 /*
  * 'compare_quotas()' - Compare two quota records...
  */
 
-static int				/* O - Result of comparison */
-compare_quotas(const cupsd_quota_t *q1,	/* I - First quota record */
-               const cupsd_quota_t *q2)	/* I - Second quota record */
+static int                              /* O - Result of comparison */
+compare_quotas(const cupsd_quota_t *q1, /* I - First quota record */
+               const cupsd_quota_t *q2) /* I - Second quota record */
 {
   return (_cups_strcasecmp(q1->username, q2->username));
 }

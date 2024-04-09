@@ -13,38 +13,35 @@
 
 #include "cgi.h"
 
-
 /*
  * Local functions...
  */
 
-static void	list_nodes(const char *title, cups_array_t *nodes);
-static int	usage(void);
-
+static void list_nodes(const char *title, cups_array_t *nodes);
+static int usage(void);
 
 /*
  * 'main()' - Test the help index code.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int		i;			/* Looping var */
-  help_index_t	*hi,			/* Help index */
-		*search;		/* Search index */
-  const char	*opt,			/* Current option character */
-		*dir = ".",		/* Directory to index */
-		*q = NULL,		/* Query string */
-		*section = NULL,	/* Section string */
-		*filename = NULL;	/* Filename string */
+  int i;                            /* Looping var */
+  help_index_t *hi,                 /* Help index */
+      *search;                      /* Search index */
+  const char *opt,                  /* Current option character */
+      *dir = ".",                   /* Directory to index */
+          *q = NULL,                /* Query string */
+              *section = NULL,      /* Section string */
+                  *filename = NULL; /* Filename string */
 
+  /*
+   * Parse the command-line...
+   */
 
- /*
-  * Parse the command-line...
-  */
-
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
   {
     if (argv[i][0] == '-')
     {
@@ -54,39 +51,39 @@ main(int  argc,				/* I - Number of command-line arguments */
         return (0);
       }
 
-      for (opt = argv[i] + 1; *opt; opt ++)
+      for (opt = argv[i] + 1; *opt; opt++)
       {
         switch (*opt)
         {
-          case 'd' : /* -d directory */
-              i ++;
-              if (i < argc)
-              {
-                dir = argv[i];
-              }
-              else
-              {
-                fputs("testhi: Missing directory for \"-d\" option.\n", stderr);
-                return (usage());
-              }
-              break;
+        case 'd': /* -d directory */
+          i++;
+          if (i < argc)
+          {
+            dir = argv[i];
+          }
+          else
+          {
+            fputs("testhi: Missing directory for \"-d\" option.\n", stderr);
+            return (usage());
+          }
+          break;
 
-          case 's' : /* -s section */
-              i ++;
-              if (i < argc)
-              {
-                section = argv[i];
-              }
-              else
-              {
-                fputs("testhi: Missing section name for \"-s\" option.\n", stderr);
-                return (usage());
-              }
-              break;
+        case 's': /* -s section */
+          i++;
+          if (i < argc)
+          {
+            section = argv[i];
+          }
+          else
+          {
+            fputs("testhi: Missing section name for \"-s\" option.\n", stderr);
+            return (usage());
+          }
+          break;
 
-          default :
-	      fprintf(stderr, "testhi: Unknown option \"-%c\".\n", *opt);
-	      return (usage());
+        default:
+          fprintf(stderr, "testhi: Unknown option \"-%c\".\n", *opt);
+          return (usage());
         }
       }
     }
@@ -101,18 +98,18 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
   }
 
- /*
-  * Load the help index...
-  */
+  /*
+   * Load the help index...
+   */
 
   hi = helpLoadIndex("testhi.index", dir);
 
   list_nodes("nodes", hi->nodes);
   list_nodes("sorted", hi->sorted);
 
- /*
-  * Do any searches...
-  */
+  /*
+   * Do any searches...
+   */
 
   if (q)
   {
@@ -129,30 +126,28 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   helpDeleteIndex(hi);
 
- /*
-  * Return with no errors...
-  */
+  /*
+   * Return with no errors...
+   */
 
   return (0);
 }
-
 
 /*
  * 'list_nodes()' - List nodes in an array...
  */
 
 static void
-list_nodes(const char   *title,		/* I - Title string */
-	   cups_array_t *nodes)		/* I - Nodes */
+list_nodes(const char *title,   /* I - Title string */
+           cups_array_t *nodes) /* I - Nodes */
 {
-  int		i;			/* Looping var */
-  help_node_t	*node;			/* Current node */
-
+  int i;             /* Looping var */
+  help_node_t *node; /* Current node */
 
   printf("%s (%d nodes):\n", title, cupsArrayCount(nodes));
   for (i = 1, node = (help_node_t *)cupsArrayFirst(nodes);
        node;
-       i ++, node = (help_node_t *)cupsArrayNext(nodes))
+       i++, node = (help_node_t *)cupsArrayNext(nodes))
   {
     if (node->anchor)
       printf("    %d: %s#%s \"%s\"", i, node->filename, node->anchor,
@@ -164,12 +159,11 @@ list_nodes(const char   *title,		/* I - Title string */
   }
 }
 
-
 /*
  * 'usage()' - Show program usage.
  */
 
-static int				/* O - Exit status */
+static int /* O - Exit status */
 usage(void)
 {
   puts("Usage: ./testhi [options] [\"query\"] [filename]");

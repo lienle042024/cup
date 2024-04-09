@@ -19,64 +19,61 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-
 /*
  * Local functions...
  */
 
-static int	do_command(int outfd, int infd, const char *command);
-static int	print_job(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
-static int	print_waiting(int outfd, int infd, char *dest);
-static int	remove_job(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
-static int	status_long(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
-static int	status_short(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
-static void	usage(void) _CUPS_NORETURN;
-
+static int do_command(int outfd, int infd, const char *command);
+static int print_job(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
+static int print_waiting(int outfd, int infd, char *dest);
+static int remove_job(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
+static int status_long(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
+static int status_short(int outfd, int infd, char *dest, char **args) _CUPS_NONNULL(4);
+static void usage(void) _CUPS_NORETURN;
 
 /*
  * 'main()' - Simulate an LPD client.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int	i;				/* Looping var */
-  int	status;				/* Test status */
-  char	*op,				/* Operation to test */
-	**opargs,			/* Remaining arguments */
-	*dest;				/* Destination */
-  int	cupslpd_argc;			/* Argument count for cups-lpd */
-  char	*cupslpd_argv[1000];		/* Arguments for cups-lpd */
-  int	cupslpd_stdin[2],		/* Standard input for cups-lpd */
-	cupslpd_stdout[2],		/* Standard output for cups-lpd */
-	cupslpd_pid,			/* Process ID for cups-lpd */
-	cupslpd_status;			/* Status of cups-lpd process */
+  int i;                    /* Looping var */
+  int status;               /* Test status */
+  char *op,                 /* Operation to test */
+      **opargs,             /* Remaining arguments */
+      *dest;                /* Destination */
+  int cupslpd_argc;         /* Argument count for cups-lpd */
+  char *cupslpd_argv[1000]; /* Arguments for cups-lpd */
+  int cupslpd_stdin[2],     /* Standard input for cups-lpd */
+      cupslpd_stdout[2],    /* Standard output for cups-lpd */
+      cupslpd_pid,          /* Process ID for cups-lpd */
+      cupslpd_status;       /* Status of cups-lpd process */
 
+  /*
+   * Collect command-line arguments...
+   */
 
- /*
-  * Collect command-line arguments...
-  */
-
-  op              = NULL;
-  opargs          = argv + argc;
-  dest            = NULL;
-  cupslpd_argc    = 1;
+  op = NULL;
+  opargs = argv + argc;
+  dest = NULL;
+  cupslpd_argc = 1;
   cupslpd_argv[0] = (char *)"cups-lpd";
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
     if (!strncmp(argv[i], "-o", 2))
     {
       cupslpd_argv[cupslpd_argc++] = argv[i];
 
       if (!argv[i][2])
       {
-        i ++;
+        i++;
 
-	if (i >= argc)
-	  usage();
+        if (i >= argc)
+          usage();
 
-	cupslpd_argv[cupslpd_argc++] = argv[i];
+        cupslpd_argv[cupslpd_argc++] = argv[i];
       }
     }
     else if (argv[i][0] == '-')
@@ -102,9 +99,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     usage();
   }
 
- /*
-  * Run the cups-lpd program using pipes...
-  */
+  /*
+   * Run the cups-lpd program using pipes...
+   */
 
   cupslpd_argv[cupslpd_argc] = NULL;
 
@@ -113,18 +110,18 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if ((cupslpd_pid = fork()) < 0)
   {
-   /*
-    * Error!
-    */
+    /*
+     * Error!
+     */
 
     perror("testlpd: Unable to fork");
     return (1);
   }
   else if (cupslpd_pid == 0)
   {
-   /*
-    * Child goes here...
-    */
+    /*
+     * Child goes here...
+     */
 
     dup2(cupslpd_stdin[0], 0);
     close(cupslpd_stdin[0]);
@@ -145,9 +142,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     close(cupslpd_stdout[1]);
   }
 
- /*
-  * Do the operation test...
-  */
+  /*
+   * Do the operation test...
+   */
 
   if (!strcmp(op, "print-job"))
     status = print_job(cupslpd_stdin[1], cupslpd_stdout[0], dest, opargs);
@@ -165,37 +162,36 @@ main(int  argc,				/* I - Number of command-line arguments */
     status = 1;
   }
 
- /*
-  * Kill the test program...
-  */
+  /*
+   * Kill the test program...
+   */
 
   close(cupslpd_stdin[1]);
   close(cupslpd_stdout[0]);
 
-  while (wait(&cupslpd_status) != cupslpd_pid);
+  while (wait(&cupslpd_status) != cupslpd_pid)
+    ;
 
   printf("cups-lpd exit status was %d...\n", cupslpd_status);
 
- /*
-  * Return the test status...
-  */
+  /*
+   * Return the test status...
+   */
 
   return (status);
 }
-
 
 /*
  * 'do_command()' - Send the LPD command and wait for a response.
  */
 
-static int				/* O - Status from cups-lpd */
-do_command(int        outfd,		/* I - Command file descriptor */
-           int        infd,		/* I - Response file descriptor */
-	   const char *command)		/* I - Command line to send */
+static int                      /* O - Status from cups-lpd */
+do_command(int outfd,           /* I - Command file descriptor */
+           int infd,            /* I - Response file descriptor */
+           const char *command) /* I - Command line to send */
 {
-  size_t	len;			/* Length of command line */
-  char		status;			/* Status byte */
-
+  size_t len;  /* Length of command line */
+  char status; /* Status byte */
 
   printf("COMMAND: %02X %s", command[0], command + 1);
 
@@ -215,31 +211,29 @@ do_command(int        outfd,		/* I - Command file descriptor */
   return (status);
 }
 
-
 /*
  * 'print_job()' - Submit a file for printing.
  */
 
-static int				/* O - Status from cups-lpd */
-print_job(int  outfd,			/* I - Command file descriptor */
-          int  infd,			/* I - Response file descriptor */
-	  char *dest,			/* I - Destination */
-	  char **args)			/* I - Arguments */
+static int             /* O - Status from cups-lpd */
+print_job(int outfd,   /* I - Command file descriptor */
+          int infd,    /* I - Response file descriptor */
+          char *dest,  /* I - Destination */
+          char **args) /* I - Arguments */
 {
-  int		fd;			/* Print file descriptor */
-  char		command[1024],		/* Command buffer */
-		control[1024],		/* Control file */
-		buffer[8192];		/* Print buffer */
-  int		status;			/* Status of command */
-  struct stat	fileinfo;		/* File information */
-  char		*jobname;		/* Job name */
-  int		sequence;		/* Sequence number */
-  ssize_t	bytes;			/* Bytes read/written */
+  int fd;               /* Print file descriptor */
+  char command[1024],   /* Command buffer */
+      control[1024],    /* Control file */
+      buffer[8192];     /* Print buffer */
+  int status;           /* Status of command */
+  struct stat fileinfo; /* File information */
+  char *jobname;        /* Job name */
+  int sequence;         /* Sequence number */
+  ssize_t bytes;        /* Bytes read/written */
 
-
- /*
-  * Check the print file...
-  */
+  /*
+   * Check the print file...
+   */
 
   if (stat(args[0], &fileinfo))
   {
@@ -253,9 +247,9 @@ print_job(int  outfd,			/* I - Command file descriptor */
     return (-1);
   }
 
- /*
-  * Send the "receive print job" command...
-  */
+  /*
+   * Send the "receive print job" command...
+   */
 
   snprintf(command, sizeof(command), "\002%s\n", dest);
   if ((status = do_command(outfd, infd, command)) != 0)
@@ -264,12 +258,12 @@ print_job(int  outfd,			/* I - Command file descriptor */
     return (status);
   }
 
- /*
-  * Format a control file string that will be used to submit the job...
-  */
+  /*
+   * Format a control file string that will be used to submit the job...
+   */
 
   if ((jobname = strrchr(args[0], '/')) != NULL)
-    jobname ++;
+    jobname++;
   else
     jobname = args[0];
 
@@ -282,11 +276,11 @@ print_job(int  outfd,			/* I - Command file descriptor */
            "ldfA%03dlocalhost\n"
            "UdfA%03dlocalhost\n"
            "N%s\n",
-	   cupsUser(), jobname, sequence, sequence, jobname);
+           cupsUser(), jobname, sequence, sequence, jobname);
 
- /*
-  * Send the control file...
-  */
+  /*
+   * Send the control file...
+   */
 
   bytes = (ssize_t)strlen(control);
 
@@ -299,7 +293,7 @@ print_job(int  outfd,			/* I - Command file descriptor */
     return (status);
   }
 
-  bytes ++;
+  bytes++;
 
   if (write(outfd, control, (size_t)bytes) < bytes)
   {
@@ -323,9 +317,9 @@ print_job(int  outfd,			/* I - Command file descriptor */
     printf("STATUS: %d\n", status);
   }
 
- /*
-  * Send the data file...
-  */
+  /*
+   * Send the data file...
+   */
 
   snprintf(command, sizeof(command), "\003%d dfA%03dlocalhost\n",
            (int)fileinfo.st_size, sequence);
@@ -368,49 +362,46 @@ print_job(int  outfd,			/* I - Command file descriptor */
   return (status);
 }
 
-
 /*
  * 'print_waiting()' - Print waiting jobs.
  */
 
-static int				/* O - Status from cups-lpd */
-print_waiting(int  outfd,		/* I - Command file descriptor */
-              int  infd,		/* I - Response file descriptor */
-	      char *dest)		/* I - Destination */
+static int                /* O - Status from cups-lpd */
+print_waiting(int outfd,  /* I - Command file descriptor */
+              int infd,   /* I - Response file descriptor */
+              char *dest) /* I - Destination */
 {
-  char		command[1024];		/* Command buffer */
+  char command[1024]; /* Command buffer */
 
-
- /*
-  * Send the "print waiting jobs" command...
-  */
+  /*
+   * Send the "print waiting jobs" command...
+   */
 
   snprintf(command, sizeof(command), "\001%s\n", dest);
 
   return (do_command(outfd, infd, command));
 }
 
-
 /*
  * 'remove_job()' - Cancel a print job.
  */
 
-static int				/* O - Status from cups-lpd */
-remove_job(int  outfd,			/* I - Command file descriptor */
-           int  infd,			/* I - Response file descriptor */
-	   char *dest,			/* I - Destination */
-	   char **args)			/* I - Arguments */
+static int              /* O - Status from cups-lpd */
+remove_job(int outfd,   /* I - Command file descriptor */
+           int infd,    /* I - Response file descriptor */
+           char *dest,  /* I - Destination */
+           char **args) /* I - Arguments */
 {
-  int		i;			/* Looping var */
-  char		command[1024];		/* Command buffer */
+  int i;              /* Looping var */
+  char command[1024]; /* Command buffer */
 
- /*
-  * Send the "remove jobs" command...
-  */
+  /*
+   * Send the "remove jobs" command...
+   */
 
   snprintf(command, sizeof(command), "\005%s", dest);
 
-  for (i = 0; args[i]; i ++)
+  for (i = 0; args[i]; i++)
   {
     strlcat(command, " ", sizeof(command));
     strlcat(command, args[i], sizeof(command));
@@ -421,25 +412,23 @@ remove_job(int  outfd,			/* I - Command file descriptor */
   return (do_command(outfd, infd, command));
 }
 
-
 /*
  * 'status_long()' - Show the long printer status.
  */
 
-static int				/* O - Status from cups-lpd */
-status_long(int  outfd,			/* I - Command file descriptor */
-            int  infd,			/* I - Response file descriptor */
-	    char *dest,			/* I - Destination */
-	    char **args)		/* I - Arguments */
+static int               /* O - Status from cups-lpd */
+status_long(int outfd,   /* I - Command file descriptor */
+            int infd,    /* I - Response file descriptor */
+            char *dest,  /* I - Destination */
+            char **args) /* I - Arguments */
 {
-  char		command[1024],		/* Command buffer */
-		buffer[8192];		/* Status buffer */
-  ssize_t	bytes;			/* Bytes read/written */
+  char command[1024], /* Command buffer */
+      buffer[8192];   /* Status buffer */
+  ssize_t bytes;      /* Bytes read/written */
 
-
- /*
-  * Send the "send short status" command...
-  */
+  /*
+   * Send the "send short status" command...
+   */
 
   if (args[0])
     snprintf(command, sizeof(command), "\004%s %s\n", dest, args[0]);
@@ -451,9 +440,9 @@ status_long(int  outfd,			/* I - Command file descriptor */
   if (write(outfd, command, (size_t)bytes) < bytes)
     return (-1);
 
- /*
-  * Read the status back...
-  */
+  /*
+   * Read the status back...
+   */
 
   while ((bytes = read(infd, buffer, sizeof(buffer))) > 0)
   {
@@ -464,25 +453,23 @@ status_long(int  outfd,			/* I - Command file descriptor */
   return (0);
 }
 
-
 /*
  * 'status_short()' - Show the short printer status.
  */
 
-static int				/* O - Status from cups-lpd */
-status_short(int  outfd,		/* I - Command file descriptor */
-             int  infd,			/* I - Response file descriptor */
-	     char *dest,		/* I - Destination */
-	     char **args)		/* I - Arguments */
+static int                /* O - Status from cups-lpd */
+status_short(int outfd,   /* I - Command file descriptor */
+             int infd,    /* I - Response file descriptor */
+             char *dest,  /* I - Destination */
+             char **args) /* I - Arguments */
 {
-  char		command[1024],		/* Command buffer */
-		buffer[8192];		/* Status buffer */
-  ssize_t	bytes;			/* Bytes read/written */
+  char command[1024], /* Command buffer */
+      buffer[8192];   /* Status buffer */
+  ssize_t bytes;      /* Bytes read/written */
 
-
- /*
-  * Send the "send short status" command...
-  */
+  /*
+   * Send the "send short status" command...
+   */
 
   if (args[0])
     snprintf(command, sizeof(command), "\003%s %s\n", dest, args[0]);
@@ -494,9 +481,9 @@ status_short(int  outfd,		/* I - Command file descriptor */
   if (write(outfd, command, (size_t)bytes) < bytes)
     return (-1);
 
- /*
-  * Read the status back...
-  */
+  /*
+   * Read the status back...
+   */
 
   while ((bytes = read(infd, buffer, sizeof(buffer))) > 0)
   {
@@ -506,7 +493,6 @@ status_short(int  outfd,		/* I - Command file descriptor */
 
   return (0);
 }
-
 
 /*
  * 'usage()' - Show program usage...

@@ -14,17 +14,16 @@
 #include "cupsd.h"
 
 #ifdef HAVE_EPOLL
-#  include <sys/epoll.h>
-#  include <poll.h>
+#include <sys/epoll.h>
+#include <poll.h>
 #elif defined(HAVE_KQUEUE)
-#  include <sys/event.h>
-#  include <sys/time.h>
+#include <sys/event.h>
+#include <sys/time.h>
 #elif defined(HAVE_POLL)
-#  include <poll.h>
+#include <poll.h>
 #else
-#  include <sys/select.h>
+#include <sys/select.h>
 #endif /* HAVE_EPOLL */
-
 
 /*
  * Design Notes for Poll/Select API in CUPSD
@@ -176,98 +175,96 @@
 
 typedef struct _cupsd_fd_s
 {
-  int			fd,		/* File descriptor */
-			use;		/* Use count */
-  cupsd_selfunc_t	read_cb,	/* Read callback */
-			write_cb;	/* Write callback */
-  void			*data;		/* Data pointer for callbacks */
+  int fd,                  /* File descriptor */
+      use;                 /* Use count */
+  cupsd_selfunc_t read_cb, /* Read callback */
+      write_cb;            /* Write callback */
+  void *data;              /* Data pointer for callbacks */
 } _cupsd_fd_t;
-
 
 /*
  * Local globals...
  */
 
-static cups_array_t	*cupsd_fds = NULL;
+static cups_array_t *cupsd_fds = NULL;
 #if defined(HAVE_EPOLL) || defined(HAVE_KQUEUE)
-static cups_array_t	*cupsd_inactive_fds = NULL;
-static int		cupsd_in_select = 0;
+static cups_array_t *cupsd_inactive_fds = NULL;
+static int cupsd_in_select = 0;
 #endif /* HAVE_EPOLL || HAVE_KQUEUE */
 
 #ifdef HAVE_KQUEUE
-static int		cupsd_kqueue_fd = -1,
-			cupsd_kqueue_changes = 0;
-static struct kevent	*cupsd_kqueue_events = NULL;
+static int cupsd_kqueue_fd = -1,
+           cupsd_kqueue_changes = 0;
+static struct kevent *cupsd_kqueue_events = NULL;
 #elif defined(HAVE_POLL)
-static int		cupsd_alloc_pollfds = 0,
-			cupsd_update_pollfds = 0;
-static struct pollfd	*cupsd_pollfds = NULL;
-#  ifdef HAVE_EPOLL
-static int		cupsd_epoll_fd = -1;
+static int cupsd_alloc_pollfds = 0,
+           cupsd_update_pollfds = 0;
+static struct pollfd *cupsd_pollfds = NULL;
+#ifdef HAVE_EPOLL
+static int cupsd_epoll_fd = -1;
 static struct epoll_event *cupsd_epoll_events = NULL;
-#  endif /* HAVE_EPOLL */
-#else /* select() */
-static fd_set		cupsd_global_input,
-			cupsd_global_output,
-			cupsd_current_input,
-			cupsd_current_output;
+#endif /* HAVE_EPOLL */
+#else  /* select() */
+static fd_set cupsd_global_input,
+    cupsd_global_output,
+    cupsd_current_input,
+    cupsd_current_output;
 #endif /* HAVE_KQUEUE */
-
 
 /*
  * Local functions...
  */
 
-static int		compare_fds(_cupsd_fd_t *a, _cupsd_fd_t *b);
-static _cupsd_fd_t	*find_fd(int fd);
-#define			release_fd(f) { \
-			  (f)->use --; \
-			  if (!(f)->use) free((f));\
-			}
-#define			retain_fd(f) (f)->use++
-
+static int compare_fds(_cupsd_fd_t *a, _cupsd_fd_t *b);
+static _cupsd_fd_t *find_fd(int fd);
+#define release_fd(f) \
+  {                   \
+    (f)->use--;       \
+    if (!(f)->use)    \
+      free((f));      \
+  }
+#define retain_fd(f) (f)->use++
 
 /*
  * 'cupsdAddSelect()' - Add a file descriptor to the list.
  */
 
-int					/* O - 1 on success, 0 on error */
-cupsdAddSelect(int             fd,	/* I - File descriptor */
-               cupsd_selfunc_t read_cb,	/* I - Read callback */
-               cupsd_selfunc_t write_cb,/* I - Write callback */
-	       void            *data)	/* I - Data to pass to callback */
+int                                      /* O - 1 on success, 0 on error */
+cupsdAddSelect(int fd,                   /* I - File descriptor */
+               cupsd_selfunc_t read_cb,  /* I - Read callback */
+               cupsd_selfunc_t write_cb, /* I - Write callback */
+               void *data)               /* I - Data to pass to callback */
 {
-  _cupsd_fd_t	*fdptr;			/* File descriptor record */
+  _cupsd_fd_t *fdptr; /* File descriptor record */
 #ifdef HAVE_EPOLL
-  int		added;			/* 1 if added, 0 if modified */
-#endif /* HAVE_EPOLL */
+  int added; /* 1 if added, 0 if modified */
+#endif       /* HAVE_EPOLL */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG2,
                   "cupsdAddSelect(fd=%d, read_cb=%p, write_cb=%p, data=%p)",
-		  fd, read_cb, write_cb, data);
+                  fd, read_cb, write_cb, data);
 
   if (fd < 0)
     return (0);
 
- /*
-  * See if this FD has already been added...
-  */
+  /*
+   * See if this FD has already been added...
+   */
 
   if ((fdptr = find_fd(fd)) == NULL)
   {
-   /*
-    * No, add a new entry...
-    */
+    /*
+     * No, add a new entry...
+     */
 
     if ((fdptr = calloc(1, sizeof(_cupsd_fd_t))) == NULL)
       return (0);
 
-    fdptr->fd  = fd;
+    fdptr->fd = fd;
     fdptr->use = 1;
 
     if (!cupsArrayAdd(cupsd_fds, fdptr))
@@ -288,11 +285,10 @@ cupsdAddSelect(int             fd,	/* I - File descriptor */
 
 #ifdef HAVE_KQUEUE
   {
-    struct kevent	event;		/* Event data */
-    struct timespec	timeout;	/* Timeout value */
+    struct kevent event;     /* Event data */
+    struct timespec timeout; /* Timeout value */
 
-
-    timeout.tv_sec  = 0;
+    timeout.tv_sec = 0;
     timeout.tv_nsec = 0;
 
     if (fdptr->read_cb != read_cb)
@@ -304,9 +300,9 @@ cupsdAddSelect(int             fd,	/* I - File descriptor */
 
       if (kevent(cupsd_kqueue_fd, &event, 1, NULL, 0, &timeout))
       {
-	cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
-			strerror(errno));
-	return (0);
+        cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
+                        strerror(errno));
+        return (0);
       }
     }
 
@@ -319,19 +315,18 @@ cupsdAddSelect(int             fd,	/* I - File descriptor */
 
       if (kevent(cupsd_kqueue_fd, &event, 1, NULL, 0, &timeout))
       {
-	cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
-			strerror(errno));
-	return (0);
+        cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
+                        strerror(errno));
+        return (0);
       }
     }
   }
 
 #elif defined(HAVE_POLL)
-#  ifdef HAVE_EPOLL
+#ifdef HAVE_EPOLL
   if (cupsd_epoll_fd >= 0)
   {
-    struct epoll_event event;		/* Event data */
-
+    struct epoll_event event; /* Event data */
 
     event.events = 0;
 
@@ -347,70 +342,68 @@ cupsdAddSelect(int             fd,	/* I - File descriptor */
                   &event))
     {
       close(cupsd_epoll_fd);
-      cupsd_epoll_fd       = -1;
+      cupsd_epoll_fd = -1;
       cupsd_update_pollfds = 1;
     }
   }
   else
-#  endif /* HAVE_EPOLL */
+#endif /* HAVE_EPOLL */
 
-  cupsd_update_pollfds = 1;
+    cupsd_update_pollfds = 1;
 
-#else /* select() */
- /*
-  * Add or remove the file descriptor in the input and output sets
-  * for select()...
-  */
+#else  /* select() */
+    /*
+     * Add or remove the file descriptor in the input and output sets
+     * for select()...
+     */
 
-  if (read_cb)
-    FD_SET(fd, &cupsd_global_input);
-  else
-  {
-    FD_CLR(fd, &cupsd_global_input);
-    FD_CLR(fd, &cupsd_current_input);
-  }
+    if (read_cb)
+      FD_SET(fd, &cupsd_global_input);
+    else
+    {
+      FD_CLR(fd, &cupsd_global_input);
+      FD_CLR(fd, &cupsd_current_input);
+    }
 
-  if (write_cb)
-    FD_SET(fd, &cupsd_global_output);
-  else
-  {
-    FD_CLR(fd, &cupsd_global_output);
-    FD_CLR(fd, &cupsd_current_output);
-  }
+    if (write_cb)
+      FD_SET(fd, &cupsd_global_output);
+    else
+    {
+      FD_CLR(fd, &cupsd_global_output);
+      FD_CLR(fd, &cupsd_current_output);
+    }
 #endif /* HAVE_KQUEUE */
 
- /*
-  * Save the (new) read and write callbacks...
-  */
+  /*
+   * Save the (new) read and write callbacks...
+   */
 
-  fdptr->read_cb  = read_cb;
+  fdptr->read_cb = read_cb;
   fdptr->write_cb = write_cb;
-  fdptr->data     = data;
+  fdptr->data = data;
 
   return (1);
 }
-
 
 /*
  * 'cupsdDoSelect()' - Do a select-like operation.
  */
 
-int					/* O - Number of files or -1 on error */
-cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
+int                         /* O - Number of files or -1 on error */
+cupsdDoSelect(long timeout) /* I - Timeout in seconds */
 {
-  int			nfds;		/* Number of file descriptors */
-  _cupsd_fd_t		*fdptr;		/* Current file descriptor */
+  int nfds;           /* Number of file descriptors */
+  _cupsd_fd_t *fdptr; /* Current file descriptor */
 #ifdef HAVE_KQUEUE
-  int			i;		/* Looping var */
-  struct kevent		*event;		/* Current event */
-  struct timespec	ktimeout;	/* kevent() timeout */
-
+  int i;                    /* Looping var */
+  struct kevent *event;     /* Current event */
+  struct timespec ktimeout; /* kevent() timeout */
 
   cupsd_in_select = 1;
 
   if (timeout >= 0 && timeout < 86400)
   {
-    ktimeout.tv_sec  = timeout;
+    ktimeout.tv_sec = timeout;
     ktimeout.tv_nsec = 0;
 
     nfds = kevent(cupsd_kqueue_fd, NULL, 0, cupsd_kqueue_events, MaxFDs,
@@ -421,7 +414,7 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
 
   cupsd_kqueue_changes = 0;
 
-  for (i = nfds, event = cupsd_kqueue_events; i > 0; i --, event ++)
+  for (i = nfds, event = cupsd_kqueue_events; i > 0; i--, event++)
   {
     fdptr = (_cupsd_fd_t *)event->udata;
 
@@ -441,22 +434,20 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
   }
 
 #elif defined(HAVE_POLL)
-  struct pollfd		*pfd;		/* Current pollfd structure */
-  int			count;		/* Number of file descriptors */
+  struct pollfd *pfd; /* Current pollfd structure */
+  int count;          /* Number of file descriptors */
 
-
-#  ifdef HAVE_EPOLL
+#ifdef HAVE_EPOLL
   cupsd_in_select = 1;
 
   if (cupsd_epoll_fd >= 0)
   {
-    int			i;		/* Looping var */
-    struct epoll_event	*event;		/* Current event */
-
+    int i;                     /* Looping var */
+    struct epoll_event *event; /* Current event */
 
     if (timeout >= 0 && timeout < 86400)
       nfds = epoll_wait(cupsd_epoll_fd, cupsd_epoll_events, MaxFDs,
-                	timeout * 1000);
+                        timeout * 1000);
     else
       nfds = epoll_wait(cupsd_epoll_fd, cupsd_epoll_events, MaxFDs, -1);
 
@@ -467,82 +458,81 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
     }
     else
     {
-      for (i = nfds, event = cupsd_epoll_events; i > 0; i --, event ++)
+      for (i = nfds, event = cupsd_epoll_events; i > 0; i--, event++)
       {
-	fdptr = (_cupsd_fd_t *)event->data.ptr;
+        fdptr = (_cupsd_fd_t *)event->data.ptr;
 
-	if (cupsArrayFind(cupsd_inactive_fds, fdptr))
-	  continue;
+        if (cupsArrayFind(cupsd_inactive_fds, fdptr))
+          continue;
 
-	retain_fd(fdptr);
+        retain_fd(fdptr);
 
-	if (fdptr->read_cb && (event->events & (EPOLLIN | EPOLLERR | EPOLLHUP)))
-	  (*(fdptr->read_cb))(fdptr->data);
+        if (fdptr->read_cb && (event->events & (EPOLLIN | EPOLLERR | EPOLLHUP)))
+          (*(fdptr->read_cb))(fdptr->data);
 
-	if (fdptr->use > 1 && fdptr->write_cb &&
+        if (fdptr->use > 1 && fdptr->write_cb &&
             (event->events & (EPOLLOUT | EPOLLERR | EPOLLHUP)) &&
             !cupsArrayFind(cupsd_inactive_fds, fdptr))
-	  (*(fdptr->write_cb))(fdptr->data);
+          (*(fdptr->write_cb))(fdptr->data);
 
-	release_fd(fdptr);
+        release_fd(fdptr);
       }
 
       goto release_inactive;
     }
   }
-#  endif /* HAVE_EPOLL */
+#endif /* HAVE_EPOLL */
 
   count = cupsArrayCount(cupsd_fds);
 
   if (cupsd_update_pollfds)
   {
-   /*
-    * Update the cupsd_pollfds array to match the current FD array...
-    */
+    /*
+     * Update the cupsd_pollfds array to match the current FD array...
+     */
 
     cupsd_update_pollfds = 0;
 
-   /*
-    * (Re)allocate memory as needed...
-    */
+    /*
+     * (Re)allocate memory as needed...
+     */
 
     if (count > cupsd_alloc_pollfds)
     {
       int allocfds = count + 16;
 
-
       if (cupsd_pollfds)
-	pfd = realloc(cupsd_pollfds, (size_t)allocfds * sizeof(struct pollfd));
+        pfd = realloc(cupsd_pollfds, (size_t)allocfds * sizeof(struct pollfd));
       else
-	pfd = malloc((size_t)allocfds * sizeof(struct pollfd));
+        pfd = malloc((size_t)allocfds * sizeof(struct pollfd));
 
       if (!pfd)
       {
-	cupsdLogMessage(CUPSD_LOG_EMERG, "Unable to allocate %d bytes for polling.", (int)((size_t)allocfds * sizeof(struct pollfd)));
+        cupsdLogMessage(CUPSD_LOG_EMERG, "Unable to allocate %d bytes for polling.", (int)((size_t)allocfds * sizeof(struct pollfd)));
 
-	return (-1);
+        return (-1);
       }
 
-      cupsd_pollfds       = pfd;
+      cupsd_pollfds = pfd;
       cupsd_alloc_pollfds = allocfds;
     }
 
-   /*
-    * Rebuild the array...
-    */
+    /*
+     * Rebuild the array...
+     */
 
     for (fdptr = (_cupsd_fd_t *)cupsArrayFirst(cupsd_fds), pfd = cupsd_pollfds;
          fdptr;
-	 fdptr = (_cupsd_fd_t *)cupsArrayNext(cupsd_fds), pfd ++)
+         fdptr = (_cupsd_fd_t *)cupsArrayNext(cupsd_fds), pfd++)
     {
-      pfd->fd      = fdptr->fd;
-      pfd->events  = 0;
+      pfd->fd = fdptr->fd;
+      pfd->events = 0;
 
       if (fdptr->read_cb)
-	pfd->events |= POLLIN;
+        pfd->events |= POLLIN;
 
       if (fdptr->write_cb)
-	pfd->events |= POLLOUT;
+        pfd->events |= POLLOUT;
     }
   }
 
@@ -553,11 +543,11 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
 
   if (nfds > 0)
   {
-   /*
-    * Do callbacks for each file descriptor...
-    */
+    /*
+     * Do callbacks for each file descriptor...
+     */
 
-    for (pfd = cupsd_pollfds; count > 0; pfd ++, count --)
+    for (pfd = cupsd_pollfds; count > 0; pfd++, count--)
     {
       if (!pfd->revents)
         continue;
@@ -579,71 +569,70 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
   }
 
 #else /* select() */
-  struct timeval	stimeout;	/* Timeout for select() */
-  int			maxfd;		/* Maximum file descriptor */
+    struct timeval stimeout; /* Timeout for select() */
+    int maxfd;               /* Maximum file descriptor */
 
+    /*
+     * Figure out the highest file descriptor number...
+     */
 
- /*
-  * Figure out the highest file descriptor number...
-  */
+    if ((fdptr = (_cupsd_fd_t *)cupsArrayLast(cupsd_fds)) == NULL)
+      maxfd = 1;
+    else
+      maxfd = fdptr->fd + 1;
 
-  if ((fdptr = (_cupsd_fd_t *)cupsArrayLast(cupsd_fds)) == NULL)
-    maxfd = 1;
-  else
-    maxfd = fdptr->fd + 1;
+    /*
+     * Do the select()...
+     */
 
- /*
-  * Do the select()...
-  */
+    cupsd_current_input = cupsd_global_input;
+    cupsd_current_output = cupsd_global_output;
 
-  cupsd_current_input  = cupsd_global_input;
-  cupsd_current_output = cupsd_global_output;
-
-  if (timeout >= 0 && timeout < 86400)
-  {
-    stimeout.tv_sec  = timeout;
-    stimeout.tv_usec = 0;
-
-    nfds = select(maxfd, &cupsd_current_input, &cupsd_current_output, NULL,
-                  &stimeout);
-  }
-  else
-    nfds = select(maxfd, &cupsd_current_input, &cupsd_current_output, NULL,
-                  NULL);
-
-  if (nfds > 0)
-  {
-   /*
-    * Do callbacks for each file descriptor...
-    */
-
-    for (fdptr = (_cupsd_fd_t *)cupsArrayFirst(cupsd_fds);
-         fdptr;
-	 fdptr = (_cupsd_fd_t *)cupsArrayNext(cupsd_fds))
+    if (timeout >= 0 && timeout < 86400)
     {
-      retain_fd(fdptr);
+      stimeout.tv_sec = timeout;
+      stimeout.tv_usec = 0;
 
-      if (fdptr->read_cb && FD_ISSET(fdptr->fd, &cupsd_current_input))
-        (*(fdptr->read_cb))(fdptr->data);
-
-      if (fdptr->use > 1 && fdptr->write_cb &&
-          FD_ISSET(fdptr->fd, &cupsd_current_output))
-        (*(fdptr->write_cb))(fdptr->data);
-
-      release_fd(fdptr);
+      nfds = select(maxfd, &cupsd_current_input, &cupsd_current_output, NULL,
+                    &stimeout);
     }
-  }
+    else
+      nfds = select(maxfd, &cupsd_current_input, &cupsd_current_output, NULL,
+                    NULL);
+
+    if (nfds > 0)
+    {
+      /*
+       * Do callbacks for each file descriptor...
+       */
+
+      for (fdptr = (_cupsd_fd_t *)cupsArrayFirst(cupsd_fds);
+           fdptr;
+           fdptr = (_cupsd_fd_t *)cupsArrayNext(cupsd_fds))
+      {
+        retain_fd(fdptr);
+
+        if (fdptr->read_cb && FD_ISSET(fdptr->fd, &cupsd_current_input))
+          (*(fdptr->read_cb))(fdptr->data);
+
+        if (fdptr->use > 1 && fdptr->write_cb &&
+            FD_ISSET(fdptr->fd, &cupsd_current_output))
+          (*(fdptr->write_cb))(fdptr->data);
+
+        release_fd(fdptr);
+      }
+    }
 
 #endif /* HAVE_KQUEUE */
 
 #if defined(HAVE_EPOLL) || defined(HAVE_KQUEUE)
- /*
-  * Release all inactive file descriptors...
-  */
+  /*
+   * Release all inactive file descriptors...
+   */
 
-#  ifndef HAVE_KQUEUE
-  release_inactive:
-#  endif /* !HAVE_KQUEUE */
+#ifndef HAVE_KQUEUE
+release_inactive:
+#endif /* !HAVE_KQUEUE */
 
   cupsd_in_select = 0;
 
@@ -656,13 +645,12 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
   }
 #endif /* HAVE_EPOLL || HAVE_KQUEUE */
 
- /*
-  * Return the number of file descriptors handled...
-  */
+  /*
+   * Return the number of file descriptors handled...
+   */
 
   return (nfds);
 }
-
 
 #ifdef CUPSD_IS_SELECTING
 /*
@@ -670,44 +658,41 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
  *                        descriptor.
  */
 
-int					/* O - 1 if selecting, 0 otherwise */
-cupsdIsSelecting(int fd)		/* I - File descriptor */
+int                      /* O - 1 if selecting, 0 otherwise */
+cupsdIsSelecting(int fd) /* I - File descriptor */
 {
   return (find_fd(fd) != NULL);
 }
 #endif /* CUPSD_IS_SELECTING */
 
-
 /*
  * 'cupsdRemoveSelect()' - Remove a file descriptor from the list.
  */
 
-void
-cupsdRemoveSelect(int fd)		/* I - File descriptor */
+void cupsdRemoveSelect(int fd) /* I - File descriptor */
 {
-  _cupsd_fd_t		*fdptr;		/* File descriptor record */
+  _cupsd_fd_t *fdptr; /* File descriptor record */
 #ifdef HAVE_EPOLL
-  struct epoll_event	event;		/* Event data */
+  struct epoll_event event; /* Event data */
 #elif defined(HAVE_KQUEUE)
-  struct kevent		event;		/* Event data */
-  struct timespec	timeout;	/* Timeout value */
+  struct kevent event;     /* Event data */
+  struct timespec timeout; /* Timeout value */
 #elif defined(HAVE_POLL)
-  /* No variables for poll() */
+    /* No variables for poll() */
 #endif /* HAVE_EPOLL */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdRemoveSelect(fd=%d)", fd);
 
   if (fd < 0)
     return;
 
- /*
-  * Find the file descriptor...
-  */
+  /*
+   * Find the file descriptor...
+   */
 
   if ((fdptr = find_fd(fd)) == NULL)
     return;
@@ -716,12 +701,12 @@ cupsdRemoveSelect(int fd)		/* I - File descriptor */
   if (epoll_ctl(cupsd_epoll_fd, EPOLL_CTL_DEL, fd, &event))
   {
     close(cupsd_epoll_fd);
-    cupsd_epoll_fd       = -1;
+    cupsd_epoll_fd = -1;
     cupsd_update_pollfds = 1;
   }
 
 #elif defined(HAVE_KQUEUE)
-  timeout.tv_sec  = 0;
+  timeout.tv_sec = 0;
   timeout.tv_nsec = 0;
 
   if (fdptr->read_cb)
@@ -731,7 +716,7 @@ cupsdRemoveSelect(int fd)		/* I - File descriptor */
     if (kevent(cupsd_kqueue_fd, &event, 1, NULL, 0, &timeout))
     {
       cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
-		      strerror(errno));
+                      strerror(errno));
       goto cleanup;
     }
   }
@@ -743,33 +728,33 @@ cupsdRemoveSelect(int fd)		/* I - File descriptor */
     if (kevent(cupsd_kqueue_fd, &event, 1, NULL, 0, &timeout))
     {
       cupsdLogMessage(CUPSD_LOG_EMERG, "kevent() returned %s",
-		      strerror(errno));
+                      strerror(errno));
       goto cleanup;
     }
   }
 
 #elif defined(HAVE_POLL)
- /*
-  * Update the pollfds array...
-  */
+    /*
+     * Update the pollfds array...
+     */
 
-  cupsd_update_pollfds = 1;
+    cupsd_update_pollfds = 1;
 
-#else /* select() */
-  FD_CLR(fd, &cupsd_global_input);
-  FD_CLR(fd, &cupsd_global_output);
-  FD_CLR(fd, &cupsd_current_input);
-  FD_CLR(fd, &cupsd_current_output);
+#else  /* select() */
+    FD_CLR(fd, &cupsd_global_input);
+    FD_CLR(fd, &cupsd_global_output);
+    FD_CLR(fd, &cupsd_current_input);
+    FD_CLR(fd, &cupsd_current_output);
 #endif /* HAVE_EPOLL */
 
 #ifdef HAVE_KQUEUE
-  cleanup:
+cleanup:
 #endif /* HAVE_KQUEUE */
 
- /*
-  * Remove the file descriptor from the active array and add to the
-  * inactive array (or release, if we don't need the inactive array...)
-  */
+  /*
+   * Remove the file descriptor from the active array and add to the
+   * inactive array (or release, if we don't need the inactive array...)
+   */
 
   cupsArrayRemove(cupsd_fds, fdptr);
 
@@ -779,16 +764,14 @@ cupsdRemoveSelect(int fd)		/* I - File descriptor */
   else
 #endif /* HAVE_EPOLL || HAVE_KQUEUE */
 
-  release_fd(fdptr);
+    release_fd(fdptr);
 }
-
 
 /*
  * 'cupsdStartSelect()' - Initialize the file polling engine.
  */
 
-void
-cupsdStartSelect(void)
+void cupsdStartSelect(void)
 {
   cupsdLogMessage(CUPSD_LOG_DEBUG, "cupsdStartSelect()");
 
@@ -799,34 +782,31 @@ cupsdStartSelect(void)
 #endif /* HAVE_EPOLL || HAVE_KQUEUE */
 
 #ifdef HAVE_EPOLL
-  cupsd_epoll_fd       = epoll_create(MaxFDs);
-  cupsd_epoll_events   = calloc((size_t)MaxFDs, sizeof(struct epoll_event));
+  cupsd_epoll_fd = epoll_create(MaxFDs);
+  cupsd_epoll_events = calloc((size_t)MaxFDs, sizeof(struct epoll_event));
   cupsd_update_pollfds = 0;
 
 #elif defined(HAVE_KQUEUE)
-  cupsd_kqueue_fd      = kqueue();
+  cupsd_kqueue_fd = kqueue();
   cupsd_kqueue_changes = 0;
-  cupsd_kqueue_events  = calloc((size_t)MaxFDs, sizeof(struct kevent));
+  cupsd_kqueue_events = calloc((size_t)MaxFDs, sizeof(struct kevent));
 
 #elif defined(HAVE_POLL)
-  cupsd_update_pollfds = 0;
+    cupsd_update_pollfds = 0;
 
-#else /* select() */
-  FD_ZERO(&cupsd_global_input);
-  FD_ZERO(&cupsd_global_output);
+#else  /* select() */
+    FD_ZERO(&cupsd_global_input);
+    FD_ZERO(&cupsd_global_output);
 #endif /* HAVE_EPOLL */
 }
-
 
 /*
  * 'cupsdStopSelect()' - Shutdown the file polling engine.
  */
 
-void
-cupsdStopSelect(void)
+void cupsdStopSelect(void)
 {
-  _cupsd_fd_t	*fdptr;			/* Current file descriptor */
-
+  _cupsd_fd_t *fdptr; /* Current file descriptor */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG, "cupsdStopSelect()");
 
@@ -859,7 +839,7 @@ cupsdStopSelect(void)
   cupsd_kqueue_changes = 0;
 
 #elif defined(HAVE_POLL)
-#  ifdef HAVE_EPOLL
+#ifdef HAVE_EPOLL
   if (cupsd_epoll_events)
   {
     free(cupsd_epoll_events);
@@ -871,51 +851,48 @@ cupsdStopSelect(void)
     close(cupsd_epoll_fd);
     cupsd_epoll_fd = -1;
   }
-#  endif /* HAVE_EPOLL */
+#endif /* HAVE_EPOLL */
 
   if (cupsd_pollfds)
   {
     free(cupsd_pollfds);
-    cupsd_pollfds       = NULL;
+    cupsd_pollfds = NULL;
     cupsd_alloc_pollfds = 0;
   }
 
   cupsd_update_pollfds = 0;
 
-#else /* select() */
-  FD_ZERO(&cupsd_global_input);
-  FD_ZERO(&cupsd_global_output);
+#else  /* select() */
+    FD_ZERO(&cupsd_global_input);
+    FD_ZERO(&cupsd_global_output);
 #endif /* HAVE_EPOLL */
 }
-
 
 /*
  * 'compare_fds()' - Compare file descriptors.
  */
 
-static int				/* O - Result of comparison */
-compare_fds(_cupsd_fd_t *a,		/* I - First file descriptor */
-            _cupsd_fd_t *b)		/* I - Second file descriptor */
+static int                  /* O - Result of comparison */
+compare_fds(_cupsd_fd_t *a, /* I - First file descriptor */
+            _cupsd_fd_t *b) /* I - Second file descriptor */
 {
   return (a->fd - b->fd);
 }
-
 
 /*
  * 'find_fd()' - Find an existing file descriptor record.
  */
 
-static _cupsd_fd_t *			/* O - FD record pointer or NULL */
-find_fd(int fd)				/* I - File descriptor */
+static _cupsd_fd_t * /* O - FD record pointer or NULL */
+find_fd(int fd)      /* I - File descriptor */
 {
-  _cupsd_fd_t	*fdptr,			/* Matching record (if any) */
-		key;			/* Search key */
-
+  _cupsd_fd_t *fdptr, /* Matching record (if any) */
+      key;            /* Search key */
 
   cupsArraySave(cupsd_fds);
 
   key.fd = fd;
-  fdptr  = (_cupsd_fd_t *)cupsArrayFind(cupsd_fds, &key);
+  fdptr = (_cupsd_fd_t *)cupsArrayFind(cupsd_fds, &key);
 
   cupsArrayRestore(cupsd_fds);
 

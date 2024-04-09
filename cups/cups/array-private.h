@@ -7,34 +7,33 @@
  */
 
 #ifndef _CUPS_ARRAY_PRIVATE_H_
-#  define _CUPS_ARRAY_PRIVATE_H_
+#define _CUPS_ARRAY_PRIVATE_H_
 
 /*
  * Include necessary headers...
  */
 
-#  include <cups/array.h>
-
+#include <cups/array.h>
 
 /*
  * C++ magic...
  */
 
-#  ifdef __cplusplus
-extern "C" {
-#  endif /* __cplusplus */
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
 
+	/*
+	 * Functions...
+	 */
 
-/*
- * Functions...
- */
+	extern int _cupsArrayAddStrings(cups_array_t *a, const char *s,
+									char delim) _CUPS_PRIVATE;
+	extern cups_array_t *_cupsArrayNewStrings(const char *s, char delim)
+		_CUPS_PRIVATE;
 
-extern int		_cupsArrayAddStrings(cups_array_t *a, const char *s,
-			                     char delim) _CUPS_PRIVATE;
-extern cups_array_t	*_cupsArrayNewStrings(const char *s, char delim)
-			                      _CUPS_PRIVATE;
-
-#  ifdef __cplusplus
+#ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#endif /* __cplusplus */
 #endif /* !_CUPS_ARRAY_PRIVATE_H_ */

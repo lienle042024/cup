@@ -18,7 +18,6 @@
 #include "ppd-private.h"
 #include "debug-internal.h"
 
-
 /*
  * Local constants...
  */
@@ -30,21 +29,19 @@ enum
   _PPD_ALL_CONSTRAINTS
 };
 
-
 /*
  * Local functions...
  */
 
-static int		ppd_is_installable(ppd_group_t *installable,
-			                   const char *option);
-static void		ppd_load_constraints(ppd_file_t *ppd);
-static cups_array_t	*ppd_test_constraints(ppd_file_t *ppd,
-			                      const char *option,
-					      const char *choice,
-			                      int num_options,
-			                      cups_option_t *options,
-					      int which);
-
+static int ppd_is_installable(ppd_group_t *installable,
+                              const char *option);
+static void ppd_load_constraints(ppd_file_t *ppd);
+static cups_array_t *ppd_test_constraints(ppd_file_t *ppd,
+                                          const char *option,
+                                          const char *choice,
+                                          int num_options,
+                                          cups_option_t *options,
+                                          int which);
 
 /*
  * 'cupsGetConflicts()' - Get a list of conflicting options in a marked PPD.
@@ -61,24 +58,23 @@ static cups_array_t	*ppd_test_constraints(ppd_file_t *ppd,
  * @since CUPS 1.4/macOS 10.6@
  */
 
-int					/* O - Number of conflicting options */
+int /* O - Number of conflicting options */
 cupsGetConflicts(
-    ppd_file_t    *ppd,			/* I - PPD file */
-    const char    *option,		/* I - Option to test */
-    const char    *choice,		/* I - Choice to test */
-    cups_option_t **options)		/* O - Conflicting options */
+    ppd_file_t *ppd,         /* I - PPD file */
+    const char *option,      /* I - Option to test */
+    const char *choice,      /* I - Choice to test */
+    cups_option_t **options) /* O - Conflicting options */
 {
-  int			i,		/* Looping var */
-			num_options;	/* Number of conflicting options */
-  cups_array_t		*active;	/* Active conflicts */
-  _ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  _ppd_cups_uiconst_t	*cptr;		/* Current constraint */
-  ppd_choice_t		*marked;	/* Marked choice */
+  int i,                     /* Looping var */
+      num_options;           /* Number of conflicting options */
+  cups_array_t *active;      /* Active conflicts */
+  _ppd_cups_uiconsts_t *c;   /* Current constraints */
+  _ppd_cups_uiconst_t *cptr; /* Current constraint */
+  ppd_choice_t *marked;      /* Marked choice */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (options)
     *options = NULL;
@@ -86,16 +82,16 @@ cupsGetConflicts(
   if (!ppd || !option || !choice || !options)
     return (0);
 
- /*
-  * Test for conflicts...
-  */
+  /*
+   * Test for conflicts...
+   */
 
   active = ppd_test_constraints(ppd, option, choice, 0, NULL,
                                 _PPD_ALL_CONSTRAINTS);
 
- /*
-  * Loop through all of the UI constraints and add any options that conflict...
-  */
+  /*
+   * Loop through all of the UI constraints and add any options that conflict...
+   */
 
   for (num_options = 0, c = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
@@ -103,17 +99,17 @@ cupsGetConflicts(
   {
     for (i = c->num_constraints, cptr = c->constraints;
          i > 0;
-	 i --, cptr ++)
+         i--, cptr++)
       if (_cups_strcasecmp(cptr->option->keyword, option))
       {
         if (cptr->choice)
-	  num_options = cupsAddOption(cptr->option->keyword,
-	                              cptr->choice->choice, num_options,
-				      options);
+          num_options = cupsAddOption(cptr->option->keyword,
+                                      cptr->choice->choice, num_options,
+                                      options);
         else if ((marked = ppdFindMarkedChoice(ppd,
-	                                       cptr->option->keyword)) != NULL)
-	  num_options = cupsAddOption(cptr->option->keyword, marked->choice,
-				      num_options, options);
+                                               cptr->option->keyword)) != NULL)
+          num_options = cupsAddOption(cptr->option->keyword, marked->choice,
+                                      num_options, options);
       }
   }
 
@@ -121,7 +117,6 @@ cupsGetConflicts(
 
   return (num_options);
 }
-
 
 /*
  * 'cupsResolveConflicts()' - Resolve conflicts in a marked PPD.
@@ -160,325 +155,323 @@ cupsGetConflicts(
  * @since CUPS 1.4/macOS 10.6@
  */
 
-int					/* O  - 1 on success, 0 on failure */
+int /* O  - 1 on success, 0 on failure */
 cupsResolveConflicts(
-    ppd_file_t    *ppd,			/* I  - PPD file */
-    const char    *option,		/* I  - Newly selected option or @code NULL@ for none */
-    const char    *choice,		/* I  - Newly selected choice or @code NULL@ for none */
-    int           *num_options,		/* IO - Number of additional selected options */
-    cups_option_t **options)		/* IO - Additional selected options */
+    ppd_file_t *ppd,         /* I  - PPD file */
+    const char *option,      /* I  - Newly selected option or @code NULL@ for none */
+    const char *choice,      /* I  - Newly selected choice or @code NULL@ for none */
+    int *num_options,        /* IO - Number of additional selected options */
+    cups_option_t **options) /* IO - Additional selected options */
 {
-  int			i,		/* Looping var */
-			tries,		/* Number of tries */
-			num_newopts;	/* Number of new options */
-  cups_option_t		*newopts;	/* New options */
-  cups_array_t		*active = NULL,	/* Active constraints */
-			*pass,		/* Resolvers for this pass */
-			*resolvers,	/* Resolvers we have used */
-			*test;		/* Test array for conflicts */
-  _ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_attr_t		*resolver;	/* Current resolver */
-  const char		*resval;	/* Pointer into resolver value */
-  char			resoption[PPD_MAX_NAME],
-					/* Current resolver option */
-			reschoice[PPD_MAX_NAME],
-					/* Current resolver choice */
-			*resptr,	/* Pointer into option/choice */
-			firstpage[255];	/* AP_FIRSTPAGE_Keyword string */
-  const char		*value;		/* Selected option value */
-  int			changed;	/* Did we change anything? */
-  ppd_choice_t		*marked;	/* Marked choice */
+  int i,                         /* Looping var */
+      tries,                     /* Number of tries */
+      num_newopts;               /* Number of new options */
+  cups_option_t *newopts;        /* New options */
+  cups_array_t *active = NULL,   /* Active constraints */
+      *pass,                     /* Resolvers for this pass */
+      *resolvers,                /* Resolvers we have used */
+      *test;                     /* Test array for conflicts */
+  _ppd_cups_uiconsts_t *consts;  /* Current constraints */
+  _ppd_cups_uiconst_t *constptr; /* Current constraint */
+  ppd_attr_t *resolver;          /* Current resolver */
+  const char *resval;            /* Pointer into resolver value */
+  char resoption[PPD_MAX_NAME],
+      /* Current resolver option */
+      reschoice[PPD_MAX_NAME],
+      /* Current resolver choice */
+      *resptr,          /* Pointer into option/choice */
+      firstpage[255];   /* AP_FIRSTPAGE_Keyword string */
+  const char *value;    /* Selected option value */
+  int changed;          /* Did we change anything? */
+  ppd_choice_t *marked; /* Marked choice */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!ppd || !num_options || !options || (option == NULL) != (choice == NULL))
     return (0);
 
- /*
-  * Build a shadow option array...
-  */
+  /*
+   * Build a shadow option array...
+   */
 
   num_newopts = 0;
-  newopts     = NULL;
+  newopts = NULL;
 
-  for (i = 0; i < *num_options; i ++)
+  for (i = 0; i < *num_options; i++)
     num_newopts = cupsAddOption((*options)[i].name, (*options)[i].value,
                                 num_newopts, &newopts);
   if (option && _cups_strcasecmp(option, "Collate"))
     num_newopts = cupsAddOption(option, choice, num_newopts, &newopts);
 
- /*
-  * Loop until we have no conflicts...
-  */
+  /*
+   * Loop until we have no conflicts...
+   */
 
   cupsArraySave(ppd->sorted_attrs);
 
   resolvers = NULL;
-  pass      = cupsArrayNew((cups_array_func_t)_cups_strcasecmp, NULL);
-  tries     = 0;
+  pass = cupsArrayNew((cups_array_func_t)_cups_strcasecmp, NULL);
+  tries = 0;
 
   while (tries < 100 &&
          (active = ppd_test_constraints(ppd, NULL, NULL, num_newopts, newopts,
                                         _PPD_ALL_CONSTRAINTS)) != NULL)
   {
-    tries ++;
+    tries++;
 
     if (!resolvers)
       resolvers = cupsArrayNew((cups_array_func_t)_cups_strcasecmp, NULL);
 
     for (consts = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active), changed = 0;
          consts;
-	 consts = (_ppd_cups_uiconsts_t *)cupsArrayNext(active))
+         consts = (_ppd_cups_uiconsts_t *)cupsArrayNext(active))
     {
       if (consts->resolver[0])
       {
-       /*
-        * Look up the resolver...
-	*/
+        /*
+         * Look up the resolver...
+         */
 
         if (cupsArrayFind(pass, consts->resolver))
-	  continue;			/* Already applied this resolver... */
+          continue; /* Already applied this resolver... */
 
         if (cupsArrayFind(resolvers, consts->resolver))
-	{
-	 /*
-	  * Resolver loop!
-	  */
+        {
+          /*
+           * Resolver loop!
+           */
 
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver loop with %s!",
-	                consts->resolver));
+          DEBUG_printf(("1cupsResolveConflicts: Resolver loop with %s!",
+                        consts->resolver));
           goto error;
-	}
+        }
 
         if ((resolver = ppdFindAttr(ppd, "cupsUIResolver",
-	                            consts->resolver)) == NULL)
+                                    consts->resolver)) == NULL)
         {
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver %s not found!",
-	                consts->resolver));
-	  goto error;
-	}
+          DEBUG_printf(("1cupsResolveConflicts: Resolver %s not found!",
+                        consts->resolver));
+          goto error;
+        }
 
         if (!resolver->value)
-	{
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver %s has no value!",
-	                consts->resolver));
-	  goto error;
-	}
+        {
+          DEBUG_printf(("1cupsResolveConflicts: Resolver %s has no value!",
+                        consts->resolver));
+          goto error;
+        }
 
-       /*
-        * Add the options from the resolver...
-	*/
+        /*
+         * Add the options from the resolver...
+         */
 
         cupsArrayAdd(pass, consts->resolver);
-	cupsArrayAdd(resolvers, consts->resolver);
+        cupsArrayAdd(resolvers, consts->resolver);
 
         for (resval = resolver->value; *resval && !changed;)
-	{
-	  while (_cups_isspace(*resval))
-	    resval ++;
+        {
+          while (_cups_isspace(*resval))
+            resval++;
 
-	  if (*resval != '*')
-	    break;
+          if (*resval != '*')
+            break;
 
-	  for (resval ++, resptr = resoption;
-	       *resval && !_cups_isspace(*resval);
-	       resval ++)
+          for (resval++, resptr = resoption;
+               *resval && !_cups_isspace(*resval);
+               resval++)
             if (resptr < (resoption + sizeof(resoption) - 1))
-	      *resptr++ = *resval;
+              *resptr++ = *resval;
 
           *resptr = '\0';
 
-	  while (_cups_isspace(*resval))
-	    resval ++;
+          while (_cups_isspace(*resval))
+            resval++;
 
-	  for (resptr = reschoice;
-	       *resval && !_cups_isspace(*resval);
-	       resval ++)
+          for (resptr = reschoice;
+               *resval && !_cups_isspace(*resval);
+               resval++)
             if (resptr < (reschoice + sizeof(reschoice) - 1))
-	      *resptr++ = *resval;
+              *resptr++ = *resval;
 
           *resptr = '\0';
 
           if (!resoption[0] || !reschoice[0])
-	    break;
+            break;
 
-         /*
-	  * Is this the option we are changing?
-	  */
+          /*
+           * Is this the option we are changing?
+           */
 
           snprintf(firstpage, sizeof(firstpage), "AP_FIRSTPAGE_%s", resoption);
 
-	  if (option &&
-	      (!_cups_strcasecmp(resoption, option) ||
-	       !_cups_strcasecmp(firstpage, option) ||
-	       (!_cups_strcasecmp(option, "PageSize") &&
-		!_cups_strcasecmp(resoption, "PageRegion")) ||
-	       (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") &&
-		!_cups_strcasecmp(resoption, "PageSize")) ||
-	       (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") &&
-		!_cups_strcasecmp(resoption, "PageRegion")) ||
-	       (!_cups_strcasecmp(option, "PageRegion") &&
-	        !_cups_strcasecmp(resoption, "PageSize")) ||
-	       (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion") &&
-	        !_cups_strcasecmp(resoption, "PageSize")) ||
-	       (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion") &&
-	        !_cups_strcasecmp(resoption, "PageRegion"))))
-	    continue;
+          if (option &&
+              (!_cups_strcasecmp(resoption, option) ||
+               !_cups_strcasecmp(firstpage, option) ||
+               (!_cups_strcasecmp(option, "PageSize") &&
+                !_cups_strcasecmp(resoption, "PageRegion")) ||
+               (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") &&
+                !_cups_strcasecmp(resoption, "PageSize")) ||
+               (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") &&
+                !_cups_strcasecmp(resoption, "PageRegion")) ||
+               (!_cups_strcasecmp(option, "PageRegion") &&
+                !_cups_strcasecmp(resoption, "PageSize")) ||
+               (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion") &&
+                !_cups_strcasecmp(resoption, "PageSize")) ||
+               (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion") &&
+                !_cups_strcasecmp(resoption, "PageRegion"))))
+            continue;
 
-	 /*
-	  * Try this choice...
-	  */
+          /*
+           * Try this choice...
+           */
 
           if ((test = ppd_test_constraints(ppd, resoption, reschoice,
-					   num_newopts, newopts,
-					   _PPD_ALL_CONSTRAINTS)) == NULL)
-	  {
-	   /*
-	    * That worked...
-	    */
+                                           num_newopts, newopts,
+                                           _PPD_ALL_CONSTRAINTS)) == NULL)
+          {
+            /*
+             * That worked...
+             */
 
             changed = 1;
-	  }
-	  else
+          }
+          else
             cupsArrayDelete(test);
 
-	 /*
-	  * Add the option/choice from the resolver regardless of whether it
-	  * worked; this makes sure that we can cascade several changes to
-	  * make things resolve...
-	  */
+          /*
+           * Add the option/choice from the resolver regardless of whether it
+           * worked; this makes sure that we can cascade several changes to
+           * make things resolve...
+           */
 
-	  num_newopts = cupsAddOption(resoption, reschoice, num_newopts,
-				      &newopts);
+          num_newopts = cupsAddOption(resoption, reschoice, num_newopts,
+                                      &newopts);
         }
       }
       else
       {
-       /*
-        * Try resolving by choosing the default values for non-installable
-	* options, then by iterating through the possible choices...
-	*/
+        /*
+         * Try resolving by choosing the default values for non-installable
+         * options, then by iterating through the possible choices...
+         */
 
-        int		j;		/* Looping var */
-	ppd_choice_t	*cptr;		/* Current choice */
-        ppd_size_t	*size;		/* Current page size */
-
+        int j;              /* Looping var */
+        ppd_choice_t *cptr; /* Current choice */
+        ppd_size_t *size;   /* Current page size */
 
         for (i = consts->num_constraints, constptr = consts->constraints;
-	     i > 0 && !changed;
-	     i --, constptr ++)
-	{
-	 /*
-	  * Can't resolve by changing an installable option...
-	  */
+             i > 0 && !changed;
+             i--, constptr++)
+        {
+          /*
+           * Can't resolve by changing an installable option...
+           */
 
-	  if (constptr->installable)
-	    continue;
+          if (constptr->installable)
+            continue;
 
-         /*
-	  * Is this the option we are changing?
-	  */
+          /*
+           * Is this the option we are changing?
+           */
 
-	  if (option &&
-	      (!_cups_strcasecmp(constptr->option->keyword, option) ||
-	       (!_cups_strcasecmp(option, "PageSize") &&
-		!_cups_strcasecmp(constptr->option->keyword, "PageRegion")) ||
-	       (!_cups_strcasecmp(option, "PageRegion") &&
-		!_cups_strcasecmp(constptr->option->keyword, "PageSize"))))
-	    continue;
+          if (option &&
+              (!_cups_strcasecmp(constptr->option->keyword, option) ||
+               (!_cups_strcasecmp(option, "PageSize") &&
+                !_cups_strcasecmp(constptr->option->keyword, "PageRegion")) ||
+               (!_cups_strcasecmp(option, "PageRegion") &&
+                !_cups_strcasecmp(constptr->option->keyword, "PageSize"))))
+            continue;
 
-         /*
-	  * Get the current option choice...
-	  */
+          /*
+           * Get the current option choice...
+           */
 
           if ((value = cupsGetOption(constptr->option->keyword, num_newopts,
-	                             newopts)) == NULL)
+                                     newopts)) == NULL)
           {
-	    if (!_cups_strcasecmp(constptr->option->keyword, "PageSize") ||
-	        !_cups_strcasecmp(constptr->option->keyword, "PageRegion"))
-	    {
-	      if ((value = cupsGetOption("PageSize", num_newopts,
-	                                 newopts)) == NULL)
+            if (!_cups_strcasecmp(constptr->option->keyword, "PageSize") ||
+                !_cups_strcasecmp(constptr->option->keyword, "PageRegion"))
+            {
+              if ((value = cupsGetOption("PageSize", num_newopts,
+                                         newopts)) == NULL)
                 value = cupsGetOption("PageRegion", num_newopts, newopts);
 
               if (!value)
-	      {
-	        if ((size = ppdPageSize(ppd, NULL)) != NULL)
-		  value = size->name;
-		else
-		  value = "";
-	      }
-	    }
-	    else
-	    {
-	      marked = ppdFindMarkedChoice(ppd, constptr->option->keyword);
-	      value  = marked ? marked->choice : "";
-	    }
-	  }
+              {
+                if ((size = ppdPageSize(ppd, NULL)) != NULL)
+                  value = size->name;
+                else
+                  value = "";
+              }
+            }
+            else
+            {
+              marked = ppdFindMarkedChoice(ppd, constptr->option->keyword);
+              value = marked ? marked->choice : "";
+            }
+          }
 
-	  if (!_cups_strncasecmp(value, "Custom.", 7))
-	    value = "Custom";
+          if (!_cups_strncasecmp(value, "Custom.", 7))
+            value = "Custom";
 
-         /*
-	  * Try the default choice...
-	  */
+          /*
+           * Try the default choice...
+           */
 
           test = NULL;
 
           if (_cups_strcasecmp(value, constptr->option->defchoice) &&
-	      (test = ppd_test_constraints(ppd, constptr->option->keyword,
-	                                   constptr->option->defchoice,
-					   num_newopts, newopts,
-					   _PPD_OPTION_CONSTRAINTS)) == NULL)
-	  {
-	   /*
-	    * That worked...
-	    */
+              (test = ppd_test_constraints(ppd, constptr->option->keyword,
+                                           constptr->option->defchoice,
+                                           num_newopts, newopts,
+                                           _PPD_OPTION_CONSTRAINTS)) == NULL)
+          {
+            /*
+             * That worked...
+             */
 
-	    num_newopts = cupsAddOption(constptr->option->keyword,
-	                                constptr->option->defchoice,
-					num_newopts, &newopts);
-            changed     = 1;
-	  }
-	  else
-	  {
-	   /*
-	    * Try each choice instead...
-	    */
+            num_newopts = cupsAddOption(constptr->option->keyword,
+                                        constptr->option->defchoice,
+                                        num_newopts, &newopts);
+            changed = 1;
+          }
+          else
+          {
+            /*
+             * Try each choice instead...
+             */
 
             for (j = constptr->option->num_choices,
-	             cptr = constptr->option->choices;
-		 j > 0;
-		 j --, cptr ++)
+                cptr = constptr->option->choices;
+                 j > 0;
+                 j--, cptr++)
             {
-	      cupsArrayDelete(test);
-	      test = NULL;
+              cupsArrayDelete(test);
+              test = NULL;
 
-	      if (_cups_strcasecmp(value, cptr->choice) &&
-	          _cups_strcasecmp(constptr->option->defchoice, cptr->choice) &&
-		  _cups_strcasecmp("Custom", cptr->choice) &&
-	          (test = ppd_test_constraints(ppd, constptr->option->keyword,
-	                                       cptr->choice, num_newopts,
-					       newopts,
-					       _PPD_OPTION_CONSTRAINTS)) == NULL)
-	      {
-	       /*
-		* This choice works...
-		*/
+              if (_cups_strcasecmp(value, cptr->choice) &&
+                  _cups_strcasecmp(constptr->option->defchoice, cptr->choice) &&
+                  _cups_strcasecmp("Custom", cptr->choice) &&
+                  (test = ppd_test_constraints(ppd, constptr->option->keyword,
+                                               cptr->choice, num_newopts,
+                                               newopts,
+                                               _PPD_OPTION_CONSTRAINTS)) == NULL)
+              {
+                /*
+                 * This choice works...
+                 */
 
-		num_newopts = cupsAddOption(constptr->option->keyword,
-					    cptr->choice, num_newopts,
-					    &newopts);
-		changed     = 1;
-		break;
-	      }
-	    }
+                num_newopts = cupsAddOption(constptr->option->keyword,
+                                            cptr->choice, num_newopts,
+                                            &newopts);
+                changed = 1;
+                break;
+              }
+            }
 
-	    cupsArrayDelete(test);
+            cupsArrayDelete(test);
           }
         }
       }
@@ -487,7 +480,7 @@ cupsResolveConflicts(
     if (!changed)
     {
       DEBUG_puts("1cupsResolveConflicts: Unable to automatically resolve "
-		 "constraint!");
+                 "constraint!");
       goto error;
     }
 
@@ -499,29 +492,29 @@ cupsResolveConflicts(
   if (tries >= 100)
     goto error;
 
- /*
-  * Free the caller's option array...
-  */
+  /*
+   * Free the caller's option array...
+   */
 
   cupsFreeOptions(*num_options, *options);
 
- /*
-  * If Collate is the option we are testing, add it here.  Otherwise, remove
-  * any Collate option from the resolve list since the filters automatically
-  * handle manual collation...
-  */
+  /*
+   * If Collate is the option we are testing, add it here.  Otherwise, remove
+   * any Collate option from the resolve list since the filters automatically
+   * handle manual collation...
+   */
 
   if (option && !_cups_strcasecmp(option, "Collate"))
     num_newopts = cupsAddOption(option, choice, num_newopts, &newopts);
   else
     num_newopts = cupsRemoveOption("Collate", num_newopts, &newopts);
 
- /*
-  * Return the new list of options to the caller...
-  */
+  /*
+   * Return the new list of options to the caller...
+   */
 
   *num_options = num_newopts;
-  *options     = newopts;
+  *options = newopts;
 
   cupsArrayDelete(pass);
   cupsArrayDelete(resolvers);
@@ -530,18 +523,18 @@ cupsResolveConflicts(
 
   DEBUG_printf(("1cupsResolveConflicts: Returning %d options:", num_newopts));
 #ifdef DEBUG
-  for (i = 0; i < num_newopts; i ++)
+  for (i = 0; i < num_newopts; i++)
     DEBUG_printf(("1cupsResolveConflicts: options[%d]: %s=%s", i,
                   newopts[i].name, newopts[i].value));
 #endif /* DEBUG */
 
   return (1);
 
- /*
-  * If we get here, we failed to resolve...
-  */
+  /*
+   * If we get here, we failed to resolve...
+   */
 
-  error:
+error:
 
   cupsFreeOptions(num_newopts, newopts);
 
@@ -556,7 +549,6 @@ cupsResolveConflicts(
   return (0);
 }
 
-
 /*
  * 'ppdConflicts()' - Check to see if there are any conflicts among the
  *                    marked option choices.
@@ -564,23 +556,22 @@ cupsResolveConflicts(
  * The returned value is the same as returned by @link ppdMarkOption@.
  */
 
-int					/* O - Number of conflicts found */
-ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
+int                           /* O - Number of conflicts found */
+ppdConflicts(ppd_file_t *ppd) /* I - PPD to check */
 {
-  int			i,		/* Looping variable */
-			conflicts;	/* Number of conflicts */
-  cups_array_t		*active;	/* Active conflicts */
-  _ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  _ppd_cups_uiconst_t	*cptr;		/* Current constraint */
-  ppd_option_t	*o;			/* Current option */
-
+  int i,                     /* Looping variable */
+      conflicts;             /* Number of conflicts */
+  cups_array_t *active;      /* Active conflicts */
+  _ppd_cups_uiconsts_t *c;   /* Current constraints */
+  _ppd_cups_uiconst_t *cptr; /* Current constraint */
+  ppd_option_t *o;           /* Current option */
 
   if (!ppd)
     return (0);
 
- /*
-  * Clear all conflicts...
-  */
+  /*
+   * Clear all conflicts...
+   */
 
   cupsArraySave(ppd->options);
 
@@ -589,18 +580,18 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
 
   cupsArrayRestore(ppd->options);
 
- /*
-  * Test for conflicts...
-  */
+  /*
+   * Test for conflicts...
+   */
 
-  active    = ppd_test_constraints(ppd, NULL, NULL, 0, NULL,
-                                   _PPD_ALL_CONSTRAINTS);
+  active = ppd_test_constraints(ppd, NULL, NULL, 0, NULL,
+                                _PPD_ALL_CONSTRAINTS);
   conflicts = cupsArrayCount(active);
 
- /*
-  * Loop through all of the UI constraints and flag any options
-  * that conflict...
-  */
+  /*
+   * Loop through all of the UI constraints and flag any options
+   * that conflict...
+   */
 
   for (c = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
@@ -608,19 +599,18 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
   {
     for (i = c->num_constraints, cptr = c->constraints;
          i > 0;
-	 i --, cptr ++)
+         i--, cptr++)
       cptr->option->conflicted = 1;
   }
 
   cupsArrayDelete(active);
 
- /*
-  * Return the number of conflicts found...
-  */
+  /*
+   * Return the number of conflicts found...
+   */
 
   return (conflicts);
 }
-
 
 /*
  * 'ppdInstallableConflict()' - Test whether an option choice conflicts with
@@ -632,57 +622,54 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
  * @since CUPS 1.4/macOS 10.6@
  */
 
-int					/* O - 1 if conflicting, 0 if not conflicting */
+int /* O - 1 if conflicting, 0 if not conflicting */
 ppdInstallableConflict(
-    ppd_file_t *ppd,			/* I - PPD file */
-    const char *option,			/* I - Option */
-    const char *choice)			/* I - Choice */
+    ppd_file_t *ppd,    /* I - PPD file */
+    const char *option, /* I - Option */
+    const char *choice) /* I - Choice */
 {
-  cups_array_t	*active;		/* Active conflicts */
-
+  cups_array_t *active; /* Active conflicts */
 
   DEBUG_printf(("2ppdInstallableConflict(ppd=%p, option=\"%s\", choice=\"%s\")",
                 ppd, option, choice));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!ppd || !option || !choice)
     return (0);
 
- /*
-  * Test constraints using the new option...
-  */
+  /*
+   * Test constraints using the new option...
+   */
 
   active = ppd_test_constraints(ppd, option, choice, 0, NULL,
-				_PPD_INSTALLABLE_CONSTRAINTS);
+                                _PPD_INSTALLABLE_CONSTRAINTS);
 
   cupsArrayDelete(active);
 
   return (active != NULL);
 }
 
-
 /*
  * 'ppd_is_installable()' - Determine whether an option is in the
  *                          InstallableOptions group.
  */
 
-static int				/* O - 1 if installable, 0 if normal */
+static int /* O - 1 if installable, 0 if normal */
 ppd_is_installable(
-    ppd_group_t *installable,		/* I - InstallableOptions group */
-    const char  *name)			/* I - Option name */
+    ppd_group_t *installable, /* I - InstallableOptions group */
+    const char *name)         /* I - Option name */
 {
   if (installable)
   {
-    int			i;		/* Looping var */
-    ppd_option_t	*option;	/* Current option */
-
+    int i;                /* Looping var */
+    ppd_option_t *option; /* Current option */
 
     for (i = installable->num_options, option = installable->options;
          i > 0;
-	 i --, option ++)
+         i--, option++)
       if (!_cups_strcasecmp(option->keyword, name))
         return (1);
   }
@@ -690,73 +677,71 @@ ppd_is_installable(
   return (0);
 }
 
-
 /*
  * 'ppd_load_constraints()' - Load constraints from a PPD file.
  */
 
 static void
-ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
+ppd_load_constraints(ppd_file_t *ppd) /* I - PPD file */
 {
-  int		i;			/* Looping var */
-  ppd_const_t	*oldconst;		/* Current UIConstraints data */
-  ppd_attr_t	*constattr;		/* Current cupsUIConstraints attribute */
-  _ppd_cups_uiconsts_t	*consts;	/* Current cupsUIConstraints data */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_group_t	*installable;		/* Installable options group */
-  const char	*vptr;			/* Pointer into constraint value */
-  char		option[PPD_MAX_NAME],	/* Option name/MainKeyword */
-		choice[PPD_MAX_NAME],	/* Choice/OptionKeyword */
-		*ptr;			/* Pointer into option or choice */
-
+  int i;                         /* Looping var */
+  ppd_const_t *oldconst;         /* Current UIConstraints data */
+  ppd_attr_t *constattr;         /* Current cupsUIConstraints attribute */
+  _ppd_cups_uiconsts_t *consts;  /* Current cupsUIConstraints data */
+  _ppd_cups_uiconst_t *constptr; /* Current constraint */
+  ppd_group_t *installable;      /* Installable options group */
+  const char *vptr;              /* Pointer into constraint value */
+  char option[PPD_MAX_NAME],     /* Option name/MainKeyword */
+      choice[PPD_MAX_NAME],      /* Choice/OptionKeyword */
+      *ptr;                      /* Pointer into option or choice */
 
   DEBUG_printf(("7ppd_load_constraints(ppd=%p)", ppd));
 
- /*
-  * Create an array to hold the constraint data...
-  */
+  /*
+   * Create an array to hold the constraint data...
+   */
 
   ppd->cups_uiconstraints = cupsArrayNew(NULL, NULL);
 
- /*
-  * Find the installable options group if it exists...
-  */
+  /*
+   * Find the installable options group if it exists...
+   */
 
   for (i = ppd->num_groups, installable = ppd->groups;
        i > 0;
-       i --, installable ++)
+       i--, installable++)
     if (!_cups_strcasecmp(installable->name, "InstallableOptions"))
       break;
 
   if (i <= 0)
     installable = NULL;
 
- /*
-  * Load old-style [Non]UIConstraints data...
-  */
+  /*
+   * Load old-style [Non]UIConstraints data...
+   */
 
-  for (i = ppd->num_consts, oldconst = ppd->consts; i > 0; i --, oldconst ++)
+  for (i = ppd->num_consts, oldconst = ppd->consts; i > 0; i--, oldconst++)
   {
-   /*
-    * Weed out nearby duplicates, since the PPD spec requires that you
-    * define both "*Foo foo *Bar bar" and "*Bar bar *Foo foo"...
-    */
+    /*
+     * Weed out nearby duplicates, since the PPD spec requires that you
+     * define both "*Foo foo *Bar bar" and "*Bar bar *Foo foo"...
+     */
 
     if (i > 1 &&
-	!_cups_strcasecmp(oldconst[0].option1, oldconst[1].option2) &&
-	!_cups_strcasecmp(oldconst[0].choice1, oldconst[1].choice2) &&
-	!_cups_strcasecmp(oldconst[0].option2, oldconst[1].option1) &&
-	!_cups_strcasecmp(oldconst[0].choice2, oldconst[1].choice1))
+        !_cups_strcasecmp(oldconst[0].option1, oldconst[1].option2) &&
+        !_cups_strcasecmp(oldconst[0].choice1, oldconst[1].choice2) &&
+        !_cups_strcasecmp(oldconst[0].option2, oldconst[1].option1) &&
+        !_cups_strcasecmp(oldconst[0].choice2, oldconst[1].choice1))
       continue;
 
-   /*
-    * Allocate memory...
-    */
+    /*
+     * Allocate memory...
+     */
 
     if ((consts = calloc(1, sizeof(_ppd_cups_uiconsts_t))) == NULL)
     {
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
-		 "UIConstraints!");
+                 "UIConstraints!");
       return;
     }
 
@@ -764,62 +749,62 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
     {
       free(consts);
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
-		 "UIConstraints!");
+                 "UIConstraints!");
       return;
     }
 
-   /*
-    * Fill in the information...
-    */
+    /*
+     * Fill in the information...
+     */
 
     consts->num_constraints = 2;
-    consts->constraints     = constptr;
+    consts->constraints = constptr;
 
     if (!_cups_strncasecmp(oldconst->option1, "Custom", 6) &&
-	!_cups_strcasecmp(oldconst->choice1, "True"))
+        !_cups_strcasecmp(oldconst->choice1, "True"))
     {
-      constptr[0].option      = ppdFindOption(ppd, oldconst->option1 + 6);
-      constptr[0].choice      = ppdFindChoice(constptr[0].option, "Custom");
+      constptr[0].option = ppdFindOption(ppd, oldconst->option1 + 6);
+      constptr[0].choice = ppdFindChoice(constptr[0].option, "Custom");
       constptr[0].installable = 0;
     }
     else
     {
-      constptr[0].option      = ppdFindOption(ppd, oldconst->option1);
-      constptr[0].choice      = ppdFindChoice(constptr[0].option,
-					      oldconst->choice1);
+      constptr[0].option = ppdFindOption(ppd, oldconst->option1);
+      constptr[0].choice = ppdFindChoice(constptr[0].option,
+                                         oldconst->choice1);
       constptr[0].installable = ppd_is_installable(installable,
-						   oldconst->option1);
+                                                   oldconst->option1);
     }
 
     if (!constptr[0].option || (!constptr[0].choice && oldconst->choice1[0]))
     {
       DEBUG_printf(("8ppd_load_constraints: Unknown option *%s %s!",
-		    oldconst->option1, oldconst->choice1));
+                    oldconst->option1, oldconst->choice1));
       free(consts->constraints);
       free(consts);
       continue;
     }
 
     if (!_cups_strncasecmp(oldconst->option2, "Custom", 6) &&
-	!_cups_strcasecmp(oldconst->choice2, "True"))
+        !_cups_strcasecmp(oldconst->choice2, "True"))
     {
-      constptr[1].option      = ppdFindOption(ppd, oldconst->option2 + 6);
-      constptr[1].choice      = ppdFindChoice(constptr[1].option, "Custom");
+      constptr[1].option = ppdFindOption(ppd, oldconst->option2 + 6);
+      constptr[1].choice = ppdFindChoice(constptr[1].option, "Custom");
       constptr[1].installable = 0;
     }
     else
     {
-      constptr[1].option      = ppdFindOption(ppd, oldconst->option2);
-      constptr[1].choice      = ppdFindChoice(constptr[1].option,
-					      oldconst->choice2);
+      constptr[1].option = ppdFindOption(ppd, oldconst->option2);
+      constptr[1].choice = ppdFindChoice(constptr[1].option,
+                                         oldconst->choice2);
       constptr[1].installable = ppd_is_installable(installable,
-						   oldconst->option2);
+                                                   oldconst->option2);
     }
 
     if (!constptr[1].option || (!constptr[1].choice && oldconst->choice2[0]))
     {
       DEBUG_printf(("8ppd_load_constraints: Unknown option *%s %s!",
-		    oldconst->option2, oldconst->choice2));
+                    oldconst->option2, oldconst->choice2));
       free(consts->constraints);
       free(consts);
       continue;
@@ -827,16 +812,16 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 
     consts->installable = constptr[0].installable || constptr[1].installable;
 
-   /*
-    * Add it to the constraints array...
-    */
+    /*
+     * Add it to the constraints array...
+     */
 
     cupsArrayAdd(ppd->cups_uiconstraints, consts);
   }
 
- /*
-  * Then load new-style constraints...
-  */
+  /*
+   * Then load new-style constraints...
+   */
 
   for (constattr = ppdFindAttr(ppd, "cupsUIConstraints", NULL);
        constattr;
@@ -849,8 +834,9 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
     }
 
     for (i = 0, vptr = strchr(constattr->value, '*');
-	 vptr;
-	 i ++, vptr = strchr(vptr + 1, '*'));
+         vptr;
+         i++, vptr = strchr(vptr + 1, '*'))
+      ;
 
     if (i == 0)
     {
@@ -861,7 +847,7 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
     if ((consts = calloc(1, sizeof(_ppd_cups_uiconsts_t))) == NULL)
     {
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
-		 "cupsUIConstraints!");
+                 "cupsUIConstraints!");
       return;
     }
 
@@ -869,59 +855,59 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
     {
       free(consts);
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
-		 "cupsUIConstraints!");
+                 "cupsUIConstraints!");
       return;
     }
 
     consts->num_constraints = i;
-    consts->constraints     = constptr;
+    consts->constraints = constptr;
 
     strlcpy(consts->resolver, constattr->spec, sizeof(consts->resolver));
 
     for (i = 0, vptr = strchr(constattr->value, '*');
-	 vptr;
-	 i ++, vptr = strchr(vptr, '*'), constptr ++)
+         vptr;
+         i++, vptr = strchr(vptr, '*'), constptr++)
     {
-     /*
-      * Extract "*Option Choice" or just "*Option"...
-      */
+      /*
+       * Extract "*Option Choice" or just "*Option"...
+       */
 
-      for (vptr ++, ptr = option; *vptr && !_cups_isspace(*vptr); vptr ++)
-	if (ptr < (option + sizeof(option) - 1))
-	  *ptr++ = *vptr;
+      for (vptr++, ptr = option; *vptr && !_cups_isspace(*vptr); vptr++)
+        if (ptr < (option + sizeof(option) - 1))
+          *ptr++ = *vptr;
 
       *ptr = '\0';
 
       while (_cups_isspace(*vptr))
-	vptr ++;
+        vptr++;
 
       if (*vptr == '*')
-	choice[0] = '\0';
+        choice[0] = '\0';
       else
       {
-	for (ptr = choice; *vptr && !_cups_isspace(*vptr); vptr ++)
-	  if (ptr < (choice + sizeof(choice) - 1))
-	    *ptr++ = *vptr;
+        for (ptr = choice; *vptr && !_cups_isspace(*vptr); vptr++)
+          if (ptr < (choice + sizeof(choice) - 1))
+            *ptr++ = *vptr;
 
-	*ptr = '\0';
+        *ptr = '\0';
       }
 
       if (!_cups_strncasecmp(option, "Custom", 6) && !_cups_strcasecmp(choice, "True"))
       {
-	_cups_strcpy(option, option + 6);
-	strlcpy(choice, "Custom", sizeof(choice));
+        _cups_strcpy(option, option + 6);
+        strlcpy(choice, "Custom", sizeof(choice));
       }
 
-      constptr->option      = ppdFindOption(ppd, option);
-      constptr->choice      = ppdFindChoice(constptr->option, choice);
+      constptr->option = ppdFindOption(ppd, option);
+      constptr->choice = ppdFindChoice(constptr->option, choice);
       constptr->installable = ppd_is_installable(installable, option);
-      consts->installable   |= constptr->installable;
+      consts->installable |= constptr->installable;
 
       if (!constptr->option || (!constptr->choice && choice[0]))
       {
-	DEBUG_printf(("8ppd_load_constraints: Unknown option *%s %s!",
-		      option, choice));
-	break;
+        DEBUG_printf(("8ppd_load_constraints: Unknown option *%s %s!",
+                      option, choice));
+        break;
       }
     }
 
@@ -935,40 +921,39 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
   }
 }
 
-
 /*
  * 'ppd_test_constraints()' - See if any constraints are active.
  */
 
-static cups_array_t *			/* O - Array of active constraints */
+static cups_array_t * /* O - Array of active constraints */
 ppd_test_constraints(
-    ppd_file_t    *ppd,			/* I - PPD file */
-    const char    *option,		/* I - Current option */
-    const char    *choice,		/* I - Current choice */
-    int           num_options,		/* I - Number of additional options */
-    cups_option_t *options,		/* I - Additional options */
-    int           which)		/* I - Which constraints to test */
+    ppd_file_t *ppd,        /* I - PPD file */
+    const char *option,     /* I - Current option */
+    const char *choice,     /* I - Current choice */
+    int num_options,        /* I - Number of additional options */
+    cups_option_t *options, /* I - Additional options */
+    int which)              /* I - Which constraints to test */
 {
-  int			i;		/* Looping var */
-  _ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_choice_t		key,		/* Search key */
-			*marked;	/* Marked choice */
-  cups_array_t		*active = NULL;	/* Active constraints */
-  const char		*value,		/* Current value */
-			*firstvalue;	/* AP_FIRSTPAGE_Keyword value */
-  char			firstpage[255];	/* AP_FIRSTPAGE_Keyword string */
-
+  int i;                         /* Looping var */
+  _ppd_cups_uiconsts_t *consts;  /* Current constraints */
+  _ppd_cups_uiconst_t *constptr; /* Current constraint */
+  ppd_choice_t key,              /* Search key */
+      *marked;                   /* Marked choice */
+  cups_array_t *active = NULL;   /* Active constraints */
+  const char *value,             /* Current value */
+      *firstvalue;               /* AP_FIRSTPAGE_Keyword value */
+  char firstpage[255];           /* AP_FIRSTPAGE_Keyword string */
 
   DEBUG_printf(("7ppd_test_constraints(ppd=%p, option=\"%s\", choice=\"%s\", "
-                "num_options=%d, options=%p, which=%d)", ppd, option, choice,
-		num_options, options, which));
+                "num_options=%d, options=%p, which=%d)",
+                ppd, option, choice,
+                num_options, options, which));
 
   if (!ppd->cups_uiconstraints)
     ppd_load_constraints(ppd);
 
   DEBUG_printf(("9ppd_test_constraints: %d constraints!",
-	        cupsArrayCount(ppd->cups_uiconstraints)));
+                cupsArrayCount(ppd->cups_uiconstraints)));
 
   cupsArraySave(ppd->marked);
 
@@ -978,37 +963,35 @@ ppd_test_constraints(
   {
     DEBUG_printf(("9ppd_test_constraints: installable=%d, resolver=\"%s\", "
                   "num_constraints=%d option1=\"%s\", choice1=\"%s\", "
-		  "option2=\"%s\", choice2=\"%s\", ...",
-		  consts->installable, consts->resolver, consts->num_constraints,
-		  consts->constraints[0].option->keyword,
-		  consts->constraints[0].choice ?
-		      consts->constraints[0].choice->choice : "",
-		  consts->constraints[1].option->keyword,
-		  consts->constraints[1].choice ?
-		      consts->constraints[1].choice->choice : ""));
+                  "option2=\"%s\", choice2=\"%s\", ...",
+                  consts->installable, consts->resolver, consts->num_constraints,
+                  consts->constraints[0].option->keyword,
+                  consts->constraints[0].choice ? consts->constraints[0].choice->choice : "",
+                  consts->constraints[1].option->keyword,
+                  consts->constraints[1].choice ? consts->constraints[1].choice->choice : ""));
 
     if (consts->installable && which < _PPD_INSTALLABLE_CONSTRAINTS)
-      continue;				/* Skip installable option constraint */
+      continue; /* Skip installable option constraint */
 
     if (!consts->installable && which == _PPD_INSTALLABLE_CONSTRAINTS)
-      continue;				/* Skip non-installable option constraint */
+      continue; /* Skip non-installable option constraint */
 
     if ((which == _PPD_OPTION_CONSTRAINTS || which == _PPD_INSTALLABLE_CONSTRAINTS) && option)
     {
-     /*
-      * Skip constraints that do not involve the current option...
-      */
+      /*
+       * Skip constraints that do not involve the current option...
+       */
 
       for (i = consts->num_constraints, constptr = consts->constraints;
-	   i > 0;
-	   i --, constptr ++)
+           i > 0;
+           i--, constptr++)
       {
         if (!_cups_strcasecmp(constptr->option->keyword, option))
-	  break;
+          break;
 
         if (!_cups_strncasecmp(option, "AP_FIRSTPAGE_", 13) &&
-	    !_cups_strcasecmp(constptr->option->keyword, option + 13))
-	  break;
+            !_cups_strcasecmp(constptr->option->keyword, option + 13))
+          break;
       }
 
       if (!i)
@@ -1019,153 +1002,152 @@ ppd_test_constraints(
 
     for (i = consts->num_constraints, constptr = consts->constraints;
          i > 0;
-	 i --, constptr ++)
+         i--, constptr++)
     {
       DEBUG_printf(("9ppd_test_constraints: %s=%s?", constptr->option->keyword,
-		    constptr->choice ? constptr->choice->choice : ""));
+                    constptr->choice ? constptr->choice->choice : ""));
 
       if (constptr->choice &&
           (!_cups_strcasecmp(constptr->option->keyword, "PageSize") ||
            !_cups_strcasecmp(constptr->option->keyword, "PageRegion")))
       {
-       /*
-        * PageSize and PageRegion are used depending on the selected input slot
-	* and manual feed mode.  Validate against the selected page size instead
-	* of an individual option...
-	*/
+        /*
+         * PageSize and PageRegion are used depending on the selected input slot
+         * and manual feed mode.  Validate against the selected page size instead
+         * of an individual option...
+         */
 
         if (option && choice &&
-	    (!_cups_strcasecmp(option, "PageSize") ||
-	     !_cups_strcasecmp(option, "PageRegion")))
-	{
-	  value = choice;
+            (!_cups_strcasecmp(option, "PageSize") ||
+             !_cups_strcasecmp(option, "PageRegion")))
+        {
+          value = choice;
         }
-	else if ((value = cupsGetOption("PageSize", num_options,
-	                                options)) == NULL)
-	  if ((value = cupsGetOption("PageRegion", num_options,
-	                             options)) == NULL)
-	    if ((value = cupsGetOption("media", num_options, options)) == NULL)
-	    {
-	      ppd_size_t *size = ppdPageSize(ppd, NULL);
+        else if ((value = cupsGetOption("PageSize", num_options,
+                                        options)) == NULL)
+          if ((value = cupsGetOption("PageRegion", num_options,
+                                     options)) == NULL)
+            if ((value = cupsGetOption("media", num_options, options)) == NULL)
+            {
+              ppd_size_t *size = ppdPageSize(ppd, NULL);
 
               if (size)
-	        value = size->name;
-	    }
+                value = size->name;
+            }
 
         if (value && !_cups_strncasecmp(value, "Custom.", 7))
-	  value = "Custom";
+          value = "Custom";
 
         if (option && choice &&
-	    (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") ||
-	     !_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion")))
-	{
-	  firstvalue = choice;
+            (!_cups_strcasecmp(option, "AP_FIRSTPAGE_PageSize") ||
+             !_cups_strcasecmp(option, "AP_FIRSTPAGE_PageRegion")))
+        {
+          firstvalue = choice;
         }
-	else if ((firstvalue = cupsGetOption("AP_FIRSTPAGE_PageSize",
-	                                     num_options, options)) == NULL)
-	  firstvalue = cupsGetOption("AP_FIRSTPAGE_PageRegion", num_options,
-	                             options);
+        else if ((firstvalue = cupsGetOption("AP_FIRSTPAGE_PageSize",
+                                             num_options, options)) == NULL)
+          firstvalue = cupsGetOption("AP_FIRSTPAGE_PageRegion", num_options,
+                                     options);
 
         if (firstvalue && !_cups_strncasecmp(firstvalue, "Custom.", 7))
-	  firstvalue = "Custom";
+          firstvalue = "Custom";
 
         if ((!value || _cups_strcasecmp(value, constptr->choice->choice)) &&
-	    (!firstvalue || _cups_strcasecmp(firstvalue, constptr->choice->choice)))
-	{
-	  DEBUG_puts("9ppd_test_constraints: NO");
-	  break;
-	}
+            (!firstvalue || _cups_strcasecmp(firstvalue, constptr->choice->choice)))
+        {
+          DEBUG_puts("9ppd_test_constraints: NO");
+          break;
+        }
       }
       else if (constptr->choice)
       {
-       /*
-        * Compare against the constrained choice...
-	*/
+        /*
+         * Compare against the constrained choice...
+         */
 
         if (option && choice && !_cups_strcasecmp(option, constptr->option->keyword))
-	{
-	  if (!_cups_strncasecmp(choice, "Custom.", 7))
-	    value = "Custom";
-	  else
-	    value = choice;
-	}
-        else if ((value = cupsGetOption(constptr->option->keyword, num_options,
-	                                options)) != NULL)
         {
-	  if (!_cups_strncasecmp(value, "Custom.", 7))
-	    value = "Custom";
-	}
+          if (!_cups_strncasecmp(choice, "Custom.", 7))
+            value = "Custom";
+          else
+            value = choice;
+        }
+        else if ((value = cupsGetOption(constptr->option->keyword, num_options,
+                                        options)) != NULL)
+        {
+          if (!_cups_strncasecmp(value, "Custom.", 7))
+            value = "Custom";
+        }
         else if (constptr->choice->marked)
-	  value = constptr->choice->choice;
-	else
-	  value = NULL;
+          value = constptr->choice->choice;
+        else
+          value = NULL;
 
-       /*
-        * Now check AP_FIRSTPAGE_option...
-	*/
+        /*
+         * Now check AP_FIRSTPAGE_option...
+         */
 
         snprintf(firstpage, sizeof(firstpage), "AP_FIRSTPAGE_%s",
-	         constptr->option->keyword);
+                 constptr->option->keyword);
 
         if (option && choice && !_cups_strcasecmp(option, firstpage))
-	{
-	  if (!_cups_strncasecmp(choice, "Custom.", 7))
-	    firstvalue = "Custom";
-	  else
-	    firstvalue = choice;
-	}
-        else if ((firstvalue = cupsGetOption(firstpage, num_options,
-	                                     options)) != NULL)
         {
-	  if (!_cups_strncasecmp(firstvalue, "Custom.", 7))
-	    firstvalue = "Custom";
-	}
-	else
-	  firstvalue = NULL;
+          if (!_cups_strncasecmp(choice, "Custom.", 7))
+            firstvalue = "Custom";
+          else
+            firstvalue = choice;
+        }
+        else if ((firstvalue = cupsGetOption(firstpage, num_options,
+                                             options)) != NULL)
+        {
+          if (!_cups_strncasecmp(firstvalue, "Custom.", 7))
+            firstvalue = "Custom";
+        }
+        else
+          firstvalue = NULL;
 
         DEBUG_printf(("9ppd_test_constraints: value=%s, firstvalue=%s", value,
-	              firstvalue));
+                      firstvalue));
 
         if ((!value || _cups_strcasecmp(value, constptr->choice->choice)) &&
-	    (!firstvalue || _cups_strcasecmp(firstvalue, constptr->choice->choice)))
-	{
-	  DEBUG_puts("9ppd_test_constraints: NO");
-	  break;
-	}
+            (!firstvalue || _cups_strcasecmp(firstvalue, constptr->choice->choice)))
+        {
+          DEBUG_puts("9ppd_test_constraints: NO");
+          break;
+        }
       }
       else if (option && choice &&
                !_cups_strcasecmp(option, constptr->option->keyword))
       {
-	if (!_cups_strcasecmp(choice, "None") || !_cups_strcasecmp(choice, "Off") ||
-	    !_cups_strcasecmp(choice, "False"))
-	{
-	  DEBUG_puts("9ppd_test_constraints: NO");
-	  break;
-	}
+        if (!_cups_strcasecmp(choice, "None") || !_cups_strcasecmp(choice, "Off") ||
+            !_cups_strcasecmp(choice, "False"))
+        {
+          DEBUG_puts("9ppd_test_constraints: NO");
+          break;
+        }
       }
       else if ((value = cupsGetOption(constptr->option->keyword, num_options,
-				      options)) != NULL)
+                                      options)) != NULL)
       {
-	if (!_cups_strcasecmp(value, "None") || !_cups_strcasecmp(value, "Off") ||
-	    !_cups_strcasecmp(value, "False"))
-	{
-	  DEBUG_puts("9ppd_test_constraints: NO");
-	  break;
-	}
+        if (!_cups_strcasecmp(value, "None") || !_cups_strcasecmp(value, "Off") ||
+            !_cups_strcasecmp(value, "False"))
+        {
+          DEBUG_puts("9ppd_test_constraints: NO");
+          break;
+        }
       }
       else
       {
-	key.option = constptr->option;
+        key.option = constptr->option;
 
-	if ((marked = (ppd_choice_t *)cupsArrayFind(ppd->marked, &key))
-		== NULL ||
-	    (!_cups_strcasecmp(marked->choice, "None") ||
-	     !_cups_strcasecmp(marked->choice, "Off") ||
-	     !_cups_strcasecmp(marked->choice, "False")))
-	{
-	  DEBUG_puts("9ppd_test_constraints: NO");
-	  break;
-	}
+        if ((marked = (ppd_choice_t *)cupsArrayFind(ppd->marked, &key)) == NULL ||
+            (!_cups_strcasecmp(marked->choice, "None") ||
+             !_cups_strcasecmp(marked->choice, "Off") ||
+             !_cups_strcasecmp(marked->choice, "False")))
+        {
+          DEBUG_puts("9ppd_test_constraints: NO");
+          break;
+        }
       }
     }
 

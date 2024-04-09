@@ -13,64 +13,61 @@
 
 #include "cgi-private.h"
 
-
 /*
  * Local functions...
  */
 
-static void	do_job_op(http_t *http, int job_id, ipp_op_t op);
-
+static void do_job_op(http_t *http, int job_id, ipp_op_t op);
 
 /*
  * 'main()' - Main entry for CGI.
  */
 
-int					/* O - Exit status */
+int /* O - Exit status */
 main(void)
 {
-  http_t	*http;			/* Connection to the server */
-  const char	*op;			/* Operation name */
-  const char	*job_id_var;		/* Job ID form variable */
-  int		job_id;			/* Job ID */
+  http_t *http;           /* Connection to the server */
+  const char *op;         /* Operation name */
+  const char *job_id_var; /* Job ID form variable */
+  int job_id;             /* Job ID */
 
-
- /*
-  * Get any form variables...
-  */
+  /*
+   * Get any form variables...
+   */
 
   cgiInitialize();
 
- /*
-  * Set the web interface section...
-  */
+  /*
+   * Set the web interface section...
+   */
 
   cgiSetVariable("SECTION", "jobs");
   cgiSetVariable("REFRESH_PAGE", "");
 
- /*
-  * Connect to the HTTP server...
-  */
+  /*
+   * Connect to the HTTP server...
+   */
 
   http = httpConnectEncrypt(cupsServer(), ippPort(), cupsEncryption());
 
- /*
-  * Get the job ID, if any...
-  */
+  /*
+   * Get the job ID, if any...
+   */
 
   if ((job_id_var = cgiGetVariable("JOB_ID")) != NULL)
     job_id = atoi(job_id_var);
   else
     job_id = 0;
 
- /*
-  * Do the operation...
-  */
+  /*
+   * Do the operation...
+   */
 
   if ((op = cgiGetVariable("OP")) != NULL && job_id > 0 && cgiIsPOST())
   {
-   /*
-    * Do the operation...
-    */
+    /*
+     * Do the operation...
+     */
 
     if (!strcmp(op, "cancel-job"))
       do_job_op(http, job_id, IPP_CANCEL_JOB);
@@ -84,9 +81,9 @@ main(void)
       do_job_op(http, job_id, IPP_RESTART_JOB);
     else
     {
-     /*
-      * Bad operation code...  Display an error...
-      */
+      /*
+       * Bad operation code...  Display an error...
+       */
 
       cgiStartHTML(cgiText(_("Jobs")));
       cgiCopyTemplateLang("error-op.tmpl");
@@ -95,52 +92,50 @@ main(void)
   }
   else
   {
-   /*
-    * Show a list of jobs...
-    */
+    /*
+     * Show a list of jobs...
+     */
 
     cgiStartHTML(cgiText(_("Jobs")));
     cgiShowJobs(http, NULL);
     cgiEndHTML();
   }
 
- /*
-  * Close the HTTP server connection...
-  */
+  /*
+   * Close the HTTP server connection...
+   */
 
   httpClose(http);
 
- /*
-  * Return with no errors...
-  */
+  /*
+   * Return with no errors...
+   */
 
   return (0);
 }
-
 
 /*
  * 'do_job_op()' - Do a job operation.
  */
 
 static void
-do_job_op(http_t      *http,		/* I - HTTP connection */
-          int         job_id,		/* I - Job ID */
-	  ipp_op_t    op)		/* I - Operation to perform */
+do_job_op(http_t *http, /* I - HTTP connection */
+          int job_id,   /* I - Job ID */
+          ipp_op_t op)  /* I - Operation to perform */
 {
-  ipp_t		*request;		/* IPP request */
-  char		uri[HTTP_MAX_URI];	/* Job URI */
-  const char	*user;			/* Username */
+  ipp_t *request;         /* IPP request */
+  char uri[HTTP_MAX_URI]; /* Job URI */
+  const char *user;       /* Username */
 
-
- /*
-  * Build a job request, which requires the following
-  * attributes:
-  *
-  *    attributes-charset
-  *    attributes-natural-language
-  *    job-uri or printer-uri (purge-jobs)
-  *    requesting-user-name
-  */
+  /*
+   * Build a job request, which requires the following
+   * attributes:
+   *
+   *    attributes-charset
+   *    attributes-natural-language
+   *    job-uri or printer-uri (purge-jobs)
+   *    requesting-user-name
+   */
 
   request = ippNewRequest(op);
 
@@ -155,20 +150,19 @@ do_job_op(http_t      *http,		/* I - HTTP connection */
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
                "requesting-user-name", NULL, user);
 
- /*
-  * Do the request and get back a response...
-  */
+  /*
+   * Do the request and get back a response...
+   */
 
   ippDelete(cupsDoRequest(http, request, "/jobs"));
 
   if (cupsLastError() <= IPP_OK_CONFLICT && getenv("HTTP_REFERER"))
   {
-   /*
-    * Redirect successful updates back to the parent page...
-    */
+    /*
+     * Redirect successful updates back to the parent page...
+     */
 
-    char	url[1024];		/* Encoded URL */
-
+    char url[1024]; /* Encoded URL */
 
     strlcpy(url, "5;URL=", sizeof(url));
     cgiFormEncode(url + 6, getenv("HTTP_REFERER"), sizeof(url) - 6);

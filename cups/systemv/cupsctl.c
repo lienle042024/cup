@@ -15,75 +15,71 @@
 #include <cups/cups-private.h>
 #include <cups/adminutil.h>
 
-
 /*
  * Local functions...
  */
 
-static void	usage(const char *opt) _CUPS_NORETURN;
-
+static void usage(const char *opt) _CUPS_NORETURN;
 
 /*
  * 'main()' - Get/set server settings.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line args */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line args */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int		i, j,			/* Looping vars */
-		num_settings;		/* Number of settings */
-  cups_option_t	*settings,		/* Settings */
-		*setting;		/* Current setting */
-  const char	*opt;			/* Current option character */
-  http_t	*http;			/* Connection to server */
-  static const char * const disallowed[] =
-  {					/* List of disallowed directives for cupsd.conf */
-    "AccessLog",
-    "CacheDir",
-    "ConfigFilePerm",
-    "DataDir",
-    "DocumentRoot",
-    "ErrorLog",
-    "FatalErrors",
-    "FileDevice",
-    "FontPath",
-    "Group",
-    "Listen",
-    "LogFilePerm",
-    "LPDConfigFile",
-    "PageLog",
-    "PassEnv",
-    "Port",
-    "Printcap",
-    "PrintcapFormat",
-    "RemoteRoot",
-    "RequestRoot",
-    "ServerBin",
-    "ServerCertificate",
-    "ServerKey",
-    "ServerKeychain",
-    "ServerRoot",
-    "SetEnv",
-    "SMBConfigFile",
-    "StateDir",
-    "SystemGroup",
-    "SystemGroupAuthKey",
-    "TempDir",
-    "User"
-  };
+  int i, j,                /* Looping vars */
+      num_settings;        /* Number of settings */
+  cups_option_t *settings, /* Settings */
+      *setting;            /* Current setting */
+  const char *opt;         /* Current option character */
+  http_t *http;            /* Connection to server */
+  static const char *const disallowed[] =
+      {/* List of disallowed directives for cupsd.conf */
+       "AccessLog",
+       "CacheDir",
+       "ConfigFilePerm",
+       "DataDir",
+       "DocumentRoot",
+       "ErrorLog",
+       "FatalErrors",
+       "FileDevice",
+       "FontPath",
+       "Group",
+       "Listen",
+       "LogFilePerm",
+       "LPDConfigFile",
+       "PageLog",
+       "PassEnv",
+       "Port",
+       "Printcap",
+       "PrintcapFormat",
+       "RemoteRoot",
+       "RequestRoot",
+       "ServerBin",
+       "ServerCertificate",
+       "ServerKey",
+       "ServerKeychain",
+       "ServerRoot",
+       "SetEnv",
+       "SMBConfigFile",
+       "StateDir",
+       "SystemGroup",
+       "SystemGroupAuthKey",
+       "TempDir",
+       "User"};
 
-
- /*
-  * Process the command-line...
-  */
+  /*
+   * Process the command-line...
+   */
 
   _cupsSetLocale(argv);
 
   num_settings = 0;
-  settings     = NULL;
+  settings = NULL;
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
   {
     if (!strcmp(argv[i], "--help"))
       usage(NULL);
@@ -92,67 +88,67 @@ main(int  argc,				/* I - Number of command-line args */
       if (argv[i][1] == '-')
       {
         if (!strcmp(argv[i], "--debug-logging"))
-	  num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING, "1",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING, "1",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--no-debug-logging"))
-	  num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING, "0",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING, "0",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--remote-admin"))
-	  num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN, "1",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN, "1",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--no-remote-admin"))
-	  num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN, "0",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN, "0",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--remote-any"))
-	  num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ANY, "1",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ANY, "1",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--no-remote-any"))
-	  num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ANY, "0",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ANY, "0",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--share-printers"))
-	  num_settings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS, "1",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS, "1",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--no-share-printers"))
-	  num_settings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS, "0",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS, "0",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--user-cancel-any"))
-	  num_settings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY, "1",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY, "1",
+                                       num_settings, &settings);
         else if (!strcmp(argv[i], "--no-user-cancel-any"))
-	  num_settings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY, "0",
-	                               num_settings, &settings);
+          num_settings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY, "0",
+                                       num_settings, &settings);
         else
-	  usage(argv[i]);
+          usage(argv[i]);
       }
       else
       {
-        for (opt = argv[i] + 1; *opt; opt ++)
-	  switch (*opt)
-	  {
-	    case 'E' :
-	        cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
-	        break;
+        for (opt = argv[i] + 1; *opt; opt++)
+          switch (*opt)
+          {
+          case 'E':
+            cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
+            break;
 
-	    case 'U' :
-	        i ++;
-		if (i >= argc)
-		  usage(NULL);
+          case 'U':
+            i++;
+            if (i >= argc)
+              usage(NULL);
 
-                cupsSetUser(argv[i]);
-	        break;
+            cupsSetUser(argv[i]);
+            break;
 
-	    case 'h' :
-	        i ++;
-		if (i >= argc)
-		  usage(NULL);
+          case 'h':
+            i++;
+            if (i >= argc)
+              usage(NULL);
 
-                cupsSetServer(argv[i]);
-	        break;
+            cupsSetServer(argv[i]);
+            break;
 
-	    default :
-	        usage(opt);
-		break;
-	  }
+          default:
+            usage(opt);
+            break;
+          }
       }
     }
     else if (strchr(argv[i], '='))
@@ -161,21 +157,21 @@ main(int  argc,				/* I - Number of command-line args */
       usage(argv[i]);
   }
 
-  for (i = num_settings, setting = settings; i > 0; i --, setting ++)
+  for (i = num_settings, setting = settings; i > 0; i--, setting++)
   {
-    for (j = 0; j < (int)(sizeof(disallowed) / sizeof(disallowed[0])); j ++)
+    for (j = 0; j < (int)(sizeof(disallowed) / sizeof(disallowed[0])); j++)
     {
       if (!_cups_strcasecmp(setting->name, disallowed[j]))
       {
-	_cupsLangPrintf(stderr, _("cupsctl: Cannot set %s directly."), disallowed[j]);
-	return (1);
+        _cupsLangPrintf(stderr, _("cupsctl: Cannot set %s directly."), disallowed[j]);
+        return (1);
       }
     }
   }
 
- /*
-  * Connect to the server using the defaults...
-  */
+  /*
+   * Connect to the server using the defaults...
+   */
 
   if ((http = httpConnectEncrypt(cupsServer(), ippPort(),
                                  cupsEncryption())) == NULL)
@@ -185,9 +181,9 @@ main(int  argc,				/* I - Number of command-line args */
     return (1);
   }
 
- /*
-  * Set the current configuration if we have anything on the command-line...
-  */
+  /*
+   * Set the current configuration if we have anything on the command-line...
+   */
 
   if (num_settings > 0)
   {
@@ -204,7 +200,7 @@ main(int  argc,				/* I - Number of command-line args */
   }
   else
   {
-    for (i = 0; i < num_settings; i ++)
+    for (i = 0; i < num_settings; i++)
       _cupsLangPrintf(stdout, "%s=%s", settings[i].name, settings[i].value);
   }
 
@@ -212,13 +208,12 @@ main(int  argc,				/* I - Number of command-line args */
   return (0);
 }
 
-
 /*
  * 'usage()' - Show program usage.
  */
 
 static void
-usage(const char *opt)			/* I - Option character/string */
+usage(const char *opt) /* I - Option character/string */
 {
   if (opt)
   {

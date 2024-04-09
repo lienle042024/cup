@@ -16,32 +16,29 @@
 #include <limits.h>
 #include <time.h>
 #ifdef HAVE_ICONV_H
-#  include <iconv.h>
+#include <iconv.h>
 #endif /* HAVE_ICONV_H */
-
 
 /*
  * Local globals...
  */
 
 #ifdef HAVE_ICONV_H
-static _cups_mutex_t	map_mutex = _CUPS_MUTEX_INITIALIZER;
-					/* Mutex to control access to maps */
-static iconv_t		map_from_utf8 = (iconv_t)-1;
-					/* Convert from UTF-8 to charset */
-static iconv_t		map_to_utf8 = (iconv_t)-1;
-					/* Convert from charset to UTF-8 */
-static cups_encoding_t	map_encoding = CUPS_AUTO_ENCODING;
-					/* Which charset is cached */
+static _cups_mutex_t map_mutex = _CUPS_MUTEX_INITIALIZER;
+/* Mutex to control access to maps */
+static iconv_t map_from_utf8 = (iconv_t)-1;
+/* Convert from UTF-8 to charset */
+static iconv_t map_to_utf8 = (iconv_t)-1;
+/* Convert from charset to UTF-8 */
+static cups_encoding_t map_encoding = CUPS_AUTO_ENCODING;
+/* Which charset is cached */
 #endif /* HAVE_ICONV_H */
-
 
 /*
  * '_cupsCharmapFlush()' - Flush all character set maps out of cache.
  */
 
-void
-_cupsCharmapFlush(void)
+void _cupsCharmapFlush(void)
 {
 #ifdef HAVE_ICONV_H
   if (map_from_utf8 != (iconv_t)-1)
@@ -60,28 +57,26 @@ _cupsCharmapFlush(void)
 #endif /* HAVE_ICONV_H */
 }
 
-
 /*
  * 'cupsCharsetToUTF8()' - Convert legacy character set to UTF-8.
  */
 
-int					/* O - Count or -1 on error */
+int /* O - Count or -1 on error */
 cupsCharsetToUTF8(
-    cups_utf8_t           *dest,	/* O - Target string */
-    const char            *src,		/* I - Source string */
-    const int             maxout,	/* I - Max output */
-    const cups_encoding_t encoding)	/* I - Encoding */
+    cups_utf8_t *dest,              /* O - Target string */
+    const char *src,                /* I - Source string */
+    const int maxout,               /* I - Max output */
+    const cups_encoding_t encoding) /* I - Encoding */
 {
-  cups_utf8_t	*destptr;		/* Pointer into UTF-8 buffer */
+  cups_utf8_t *destptr; /* Pointer into UTF-8 buffer */
 #ifdef HAVE_ICONV_H
-  size_t	srclen,			/* Length of source string */
-		outBytesLeft;		/* Bytes remaining in output buffer */
-#endif /* HAVE_ICONV_H */
+  size_t srclen,    /* Length of source string */
+      outBytesLeft; /* Bytes remaining in output buffer */
+#endif              /* HAVE_ICONV_H */
 
-
- /*
-  * Check for valid arguments...
-  */
+  /*
+   * Check for valid arguments...
+   */
 
   DEBUG_printf(("2cupsCharsetToUTF8(dest=%p, src=\"%s\", maxout=%d, encoding=%d)", (void *)dest, src, maxout, encoding));
 
@@ -94,9 +89,9 @@ cupsCharsetToUTF8(
     return (-1);
   }
 
- /*
-  * Handle identity conversions...
-  */
+  /*
+   * Handle identity conversions...
+   */
 
   if (encoding == CUPS_UTF8 || encoding <= CUPS_US_ASCII ||
       encoding >= CUPS_ENCODING_VBCS_END)
@@ -105,17 +100,16 @@ cupsCharsetToUTF8(
     return ((int)strlen((char *)dest));
   }
 
- /*
-  * Handle ISO-8859-1 to UTF-8 directly...
-  */
+  /*
+   * Handle ISO-8859-1 to UTF-8 directly...
+   */
 
   destptr = dest;
 
   if (encoding == CUPS_ISO8859_1)
   {
-    int		ch;			/* Character from string */
-    cups_utf8_t	*destend;		/* End of UTF-8 buffer */
-
+    int ch;               /* Character from string */
+    cups_utf8_t *destend; /* End of UTF-8 buffer */
 
     destend = dest + maxout - 2;
 
@@ -125,11 +119,11 @@ cupsCharsetToUTF8(
 
       if (ch & 128)
       {
-	*destptr++ = (cups_utf8_t)(0xc0 | (ch >> 6));
-	*destptr++ = (cups_utf8_t)(0x80 | (ch & 0x3f));
+        *destptr++ = (cups_utf8_t)(0xc0 | (ch >> 6));
+        *destptr++ = (cups_utf8_t)(0x80 | (ch & 0x3f));
       }
       else
-	*destptr++ = (cups_utf8_t)ch;
+        *destptr++ = (cups_utf8_t)ch;
     }
 
     *destptr = '\0';
@@ -137,31 +131,31 @@ cupsCharsetToUTF8(
     return ((int)(destptr - dest));
   }
 
- /*
-  * Convert input legacy charset to UTF-8...
-  */
+  /*
+   * Convert input legacy charset to UTF-8...
+   */
 
 #ifdef HAVE_ICONV_H
   _cupsMutexLock(&map_mutex);
 
   if (map_encoding != encoding)
   {
-    char	toset[1024];		/* Destination character set */
+    char toset[1024]; /* Destination character set */
 
     _cupsCharmapFlush();
 
     snprintf(toset, sizeof(toset), "%s//IGNORE", _cupsEncodingName(encoding));
 
-    map_encoding  = encoding;
+    map_encoding = encoding;
     map_from_utf8 = iconv_open(_cupsEncodingName(encoding), "UTF-8");
-    map_to_utf8   = iconv_open("UTF-8", toset);
+    map_to_utf8 = iconv_open("UTF-8", toset);
   }
 
   if (map_to_utf8 != (iconv_t)-1)
   {
-    char *altdestptr = (char *)dest;	/* Silence bogus GCC type-punned */
+    char *altdestptr = (char *)dest; /* Silence bogus GCC type-punned */
 
-    srclen       = strlen(src);
+    srclen = strlen(src);
     outBytesLeft = (size_t)maxout - 1;
 
     iconv(map_to_utf8, (char **)&src, &srclen, &altdestptr, &outBytesLeft);
@@ -175,37 +169,35 @@ cupsCharsetToUTF8(
   _cupsMutexUnlock(&map_mutex);
 #endif /* HAVE_ICONV_H */
 
- /*
-  * No iconv() support, so error out...
-  */
+  /*
+   * No iconv() support, so error out...
+   */
 
   *destptr = '\0';
 
   return (-1);
 }
 
-
 /*
  * 'cupsUTF8ToCharset()' - Convert UTF-8 to legacy character set.
  */
 
-int					/* O - Count or -1 on error */
+int /* O - Count or -1 on error */
 cupsUTF8ToCharset(
-    char		  *dest,	/* O - Target string */
-    const cups_utf8_t	  *src,		/* I - Source string */
-    const int		  maxout,	/* I - Max output */
-    const cups_encoding_t encoding)	/* I - Encoding */
+    char *dest,                     /* O - Target string */
+    const cups_utf8_t *src,         /* I - Source string */
+    const int maxout,               /* I - Max output */
+    const cups_encoding_t encoding) /* I - Encoding */
 {
-  char		*destptr;		/* Pointer into destination */
+  char *destptr; /* Pointer into destination */
 #ifdef HAVE_ICONV_H
-  size_t	srclen,			/* Length of source string */
-		outBytesLeft;		/* Bytes remaining in output buffer */
-#endif /* HAVE_ICONV_H */
+  size_t srclen,    /* Length of source string */
+      outBytesLeft; /* Bytes remaining in output buffer */
+#endif              /* HAVE_ICONV_H */
 
-
- /*
-  * Check for valid arguments...
-  */
+  /*
+   * Check for valid arguments...
+   */
 
   if (!dest || !src || maxout < 1)
   {
@@ -215,9 +207,9 @@ cupsUTF8ToCharset(
     return (-1);
   }
 
- /*
-  * Handle identity conversions...
-  */
+  /*
+   * Handle identity conversions...
+   */
 
   if (encoding == CUPS_UTF8 ||
       encoding >= CUPS_ENCODING_VBCS_END)
@@ -226,19 +218,19 @@ cupsUTF8ToCharset(
     return ((int)strlen(dest));
   }
 
- /*
-  * Handle UTF-8 to ISO-8859-1 directly...
-  */
+  /*
+   * Handle UTF-8 to ISO-8859-1 directly...
+   */
 
   destptr = dest;
 
   if (encoding == CUPS_ISO8859_1 || encoding <= CUPS_US_ASCII)
   {
-    int		ch,			/* Character from string */
-		maxch;			/* Maximum character for charset */
-    char	*destend;		/* End of ISO-8859-1 buffer */
+    int ch,        /* Character from string */
+        maxch;     /* Maximum character for charset */
+    char *destend; /* End of ISO-8859-1 buffer */
 
-    maxch   = encoding == CUPS_ISO8859_1 ? 256 : 128;
+    maxch = encoding == CUPS_ISO8859_1 ? 256 : 128;
     destend = dest + maxout - 1;
 
     while (*src && destptr < destend)
@@ -247,18 +239,18 @@ cupsUTF8ToCharset(
 
       if ((ch & 0xe0) == 0xc0)
       {
-	ch = ((ch & 0x1f) << 6) | (*src++ & 0x3f);
+        ch = ((ch & 0x1f) << 6) | (*src++ & 0x3f);
 
-	if (ch < maxch)
+        if (ch < maxch)
           *destptr++ = (char)ch;
-	else
+        else
           *destptr++ = '?';
       }
       else if ((ch & 0xf0) == 0xe0 ||
                (ch & 0xf8) == 0xf0)
         *destptr++ = '?';
       else if (!(ch & 0x80))
-	*destptr++ = (char)ch;
+        *destptr++ = (char)ch;
     }
 
     *destptr = '\0';
@@ -267,30 +259,30 @@ cupsUTF8ToCharset(
   }
 
 #ifdef HAVE_ICONV_H
- /*
-  * Convert input UTF-8 to legacy charset...
-  */
+  /*
+   * Convert input UTF-8 to legacy charset...
+   */
 
   _cupsMutexLock(&map_mutex);
 
   if (map_encoding != encoding)
   {
-    char	toset[1024];		/* Destination character set */
+    char toset[1024]; /* Destination character set */
 
     _cupsCharmapFlush();
 
     snprintf(toset, sizeof(toset), "%s//IGNORE", _cupsEncodingName(encoding));
 
-    map_encoding  = encoding;
+    map_encoding = encoding;
     map_from_utf8 = iconv_open(_cupsEncodingName(encoding), "UTF-8");
-    map_to_utf8   = iconv_open("UTF-8", toset);
+    map_to_utf8 = iconv_open("UTF-8", toset);
   }
 
   if (map_from_utf8 != (iconv_t)-1)
   {
-    char *altsrc = (char *)src;		/* Silence bogus GCC type-punned */
+    char *altsrc = (char *)src; /* Silence bogus GCC type-punned */
 
-    srclen       = strlen((char *)src);
+    srclen = strlen((char *)src);
     outBytesLeft = (size_t)maxout - 1;
 
     iconv(map_from_utf8, &altsrc, &srclen, &destptr, &outBytesLeft);
@@ -304,15 +296,14 @@ cupsUTF8ToCharset(
   _cupsMutexUnlock(&map_mutex);
 #endif /* HAVE_ICONV_H */
 
- /*
-  * No iconv() support, so error out...
-  */
+  /*
+   * No iconv() support, so error out...
+   */
 
   *destptr = '\0';
 
   return (-1);
 }
-
 
 /*
  * 'cupsUTF8ToUTF32()' - Convert UTF-8 to UTF-32.
@@ -330,21 +321,20 @@ cupsUTF8ToCharset(
  * which would convert to five- or six-octet UTF-8 sequences...
  */
 
-int					/* O - Count or -1 on error */
+int /* O - Count or -1 on error */
 cupsUTF8ToUTF32(
-    cups_utf32_t      *dest,		/* O - Target string */
-    const cups_utf8_t *src,		/* I - Source string */
-    const int         maxout)		/* I - Max output */
+    cups_utf32_t *dest,     /* O - Target string */
+    const cups_utf8_t *src, /* I - Source string */
+    const int maxout)       /* I - Max output */
 {
-  int		i;			/* Looping variable */
-  cups_utf8_t	ch;			/* Character value */
-  cups_utf8_t	next;			/* Next character value */
-  cups_utf32_t	ch32;			/* UTF-32 character value */
+  int i;             /* Looping variable */
+  cups_utf8_t ch;    /* Character value */
+  cups_utf8_t next;  /* Next character value */
+  cups_utf32_t ch32; /* UTF-32 character value */
 
-
- /*
-  * Check for valid arguments and clear output...
-  */
+  /*
+   * Check for valid arguments and clear output...
+   */
 
   DEBUG_printf(("2cupsUTF8ToUTF32(dest=%p, src=\"%s\", maxout=%d)", (void *)dest, src, maxout));
 
@@ -358,23 +348,23 @@ cupsUTF8ToUTF32(
     return (-1);
   }
 
- /*
-  * Convert input UTF-8 to output UTF-32...
-  */
+  /*
+   * Convert input UTF-8 to output UTF-32...
+   */
 
-  for (i = maxout - 1; *src && i > 0; i --)
+  for (i = maxout - 1; *src && i > 0; i--)
   {
     ch = *src++;
 
-   /*
-    * Convert UTF-8 character(s) to UTF-32 character...
-    */
+    /*
+     * Convert UTF-8 character(s) to UTF-32 character...
+     */
 
     if (!(ch & 0x80))
     {
-     /*
-      * One-octet UTF-8 <= 127 (US-ASCII)...
-      */
+      /*
+       * One-octet UTF-8 <= 127 (US-ASCII)...
+       */
 
       *dest++ = ch;
 
@@ -383,29 +373,29 @@ cupsUTF8ToUTF32(
     }
     else if ((ch & 0xe0) == 0xc0)
     {
-     /*
-      * Two-octet UTF-8 <= 2047 (Latin-x)...
-      */
+      /*
+       * Two-octet UTF-8 <= 2047 (Latin-x)...
+       */
 
       next = *src++;
       if ((next & 0xc0) != 0x80)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (cups_utf32_t)((ch & 0x1f) << 6) | (cups_utf32_t)(next & 0x3f);
 
-     /*
-      * Check for non-shortest form (invalid UTF-8)...
-      */
+      /*
+       * Check for non-shortest form (invalid UTF-8)...
+       */
 
       if (ch32 < 0x80)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       *dest++ = ch32;
@@ -415,16 +405,16 @@ cupsUTF8ToUTF32(
     }
     else if ((ch & 0xf0) == 0xe0)
     {
-     /*
-      * Three-octet UTF-8 <= 65535 (Plane 0 - BMP)...
-      */
+      /*
+       * Three-octet UTF-8 <= 65535 (Plane 0 - BMP)...
+       */
 
       next = *src++;
       if ((next & 0xc0) != 0x80)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (cups_utf32_t)((ch & 0x0f) << 6) | (cups_utf32_t)(next & 0x3f);
@@ -434,20 +424,20 @@ cupsUTF8ToUTF32(
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (ch32 << 6) | (cups_utf32_t)(next & 0x3f);
 
-     /*
-      * Check for non-shortest form (invalid UTF-8)...
-      */
+      /*
+       * Check for non-shortest form (invalid UTF-8)...
+       */
 
       if (ch32 < 0x800)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       *dest++ = ch32;
@@ -457,16 +447,16 @@ cupsUTF8ToUTF32(
     }
     else if ((ch & 0xf8) == 0xf0)
     {
-     /*
-      * Four-octet UTF-8...
-      */
+      /*
+       * Four-octet UTF-8...
+       */
 
       next = *src++;
       if ((next & 0xc0) != 0x80)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (cups_utf32_t)((ch & 0x07) << 6) | (cups_utf32_t)(next & 0x3f);
@@ -476,7 +466,7 @@ cupsUTF8ToUTF32(
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (ch32 << 6) | (cups_utf32_t)(next & 0x3f);
@@ -486,20 +476,20 @@ cupsUTF8ToUTF32(
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       ch32 = (ch32 << 6) | (cups_utf32_t)(next & 0x3f);
 
-     /*
-      * Check for non-shortest form (invalid UTF-8)...
-      */
+      /*
+       * Check for non-shortest form (invalid UTF-8)...
+       */
 
       if (ch32 < 0x10000)
       {
         DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
-	return (-1);
+        return (-1);
       }
 
       *dest++ = ch32;
@@ -509,18 +499,18 @@ cupsUTF8ToUTF32(
     }
     else
     {
-     /*
-      * More than 4-octet (invalid UTF-8 sequence)...
-      */
+      /*
+       * More than 4-octet (invalid UTF-8 sequence)...
+       */
 
       DEBUG_puts("3cupsUTF8ToUTF32: Returning -1 (bad UTF-8 sequence)");
 
       return (-1);
     }
 
-   /*
-    * Check for UTF-16 surrogate (illegal UTF-8)...
-    */
+    /*
+     * Check for UTF-16 surrogate (illegal UTF-8)...
+     */
 
     if (ch32 >= 0xd800 && ch32 <= 0xdfff)
       return (-1);
@@ -532,7 +522,6 @@ cupsUTF8ToUTF32(
 
   return (maxout - 1 - i);
 }
-
 
 /*
  * 'cupsUTF32ToUTF8()' - Convert UTF-32 to UTF-8.
@@ -550,21 +539,20 @@ cupsUTF8ToUTF32(
  * which would convert to five- or six-octet UTF-8 sequences...
  */
 
-int					/* O - Count or -1 on error */
+int /* O - Count or -1 on error */
 cupsUTF32ToUTF8(
-    cups_utf8_t        *dest,		/* O - Target string */
-    const cups_utf32_t *src,		/* I - Source string */
-    const int          maxout)		/* I - Max output */
+    cups_utf8_t *dest,       /* O - Target string */
+    const cups_utf32_t *src, /* I - Source string */
+    const int maxout)        /* I - Max output */
 {
-  cups_utf8_t	*start;			/* Start of destination string */
-  int		i;			/* Looping variable */
-  int		swap;			/* Byte-swap input to output */
-  cups_utf32_t	ch;			/* Character value */
+  cups_utf8_t *start; /* Start of destination string */
+  int i;              /* Looping variable */
+  int swap;           /* Byte-swap input to output */
+  cups_utf32_t ch;    /* Character value */
 
-
- /*
-  * Check for valid arguments and clear output...
-  */
+  /*
+   * Check for valid arguments and clear output...
+   */
 
   DEBUG_printf(("2cupsUTF32ToUTF8(dest=%p, src=%p, maxout=%d)", (void *)dest, (void *)src, maxout));
 
@@ -578,37 +566,37 @@ cupsUTF32ToUTF8(
     return (-1);
   }
 
- /*
-  * Check for leading BOM in UTF-32 and inverted BOM...
-  */
+  /*
+   * Check for leading BOM in UTF-32 and inverted BOM...
+   */
 
   start = dest;
-  swap  = *src == 0xfffe0000;
+  swap = *src == 0xfffe0000;
 
   DEBUG_printf(("4cupsUTF32ToUTF8: swap=%d", swap));
 
   if (*src == 0xfffe0000 || *src == 0xfeff)
-    src ++;
+    src++;
 
- /*
-  * Convert input UTF-32 to output UTF-8...
-  */
+  /*
+   * Convert input UTF-32 to output UTF-8...
+   */
 
   for (i = maxout - 1; *src && i > 0;)
   {
     ch = *src++;
 
-   /*
-    * Byte swap input UTF-32, if necessary...
-    * (only byte-swapping 24 of 32 bits)
-    */
+    /*
+     * Byte swap input UTF-32, if necessary...
+     * (only byte-swapping 24 of 32 bits)
+     */
 
     if (swap)
       ch = ((ch >> 24) | ((ch >> 8) & 0xff00) | ((ch << 8) & 0xff0000));
 
-   /*
-    * Check for beyond Plane 16 (invalid UTF-32)...
-    */
+    /*
+     * Check for beyond Plane 16 (invalid UTF-32)...
+     */
 
     if (ch > 0x10ffff)
     {
@@ -617,26 +605,26 @@ cupsUTF32ToUTF8(
       return (-1);
     }
 
-   /*
-    * Convert UTF-32 character to UTF-8 character(s)...
-    */
+    /*
+     * Convert UTF-32 character to UTF-8 character(s)...
+     */
 
     if (ch < 0x80)
     {
-     /*
-      * One-octet UTF-8 <= 127 (US-ASCII)...
-      */
+      /*
+       * One-octet UTF-8 <= 127 (US-ASCII)...
+       */
 
       *dest++ = (cups_utf8_t)ch;
-      i --;
+      i--;
 
       DEBUG_printf(("4cupsUTF32ToUTF8: %08x => %02x", (unsigned)ch, dest[-1]));
     }
     else if (ch < 0x800)
     {
-     /*
-      * Two-octet UTF-8 <= 2047 (Latin-x)...
-      */
+      /*
+       * Two-octet UTF-8 <= 2047 (Latin-x)...
+       */
 
       if (i < 2)
       {
@@ -654,9 +642,9 @@ cupsUTF32ToUTF8(
     }
     else if (ch < 0x10000)
     {
-     /*
-      * Three-octet UTF-8 <= 65535 (Plane 0 - BMP)...
-      */
+      /*
+       * Three-octet UTF-8 <= 65535 (Plane 0 - BMP)...
+       */
 
       if (i < 3)
       {
@@ -675,9 +663,9 @@ cupsUTF32ToUTF8(
     }
     else
     {
-     /*
-      * Four-octet UTF-8...
-      */
+      /*
+       * Four-octet UTF-8...
+       */
 
       if (i < 4)
       {

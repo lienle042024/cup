@@ -8,28 +8,26 @@
  */
 
 #ifndef _CUPS_MIME_PRIVATE_H_
-#  define _CUPS_MIME_PRIVATE_H_
+#define _CUPS_MIME_PRIVATE_H_
 
-#  include "mime.h"
-
+#include "mime.h"
 
 /*
  * C++ magic...
  */
 
-#  ifdef __cplusplus
-extern "C" {
-#  endif /* __cplusplus */
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
 
+    /*
+     * Prototypes...
+     */
 
-/*
- * Prototypes...
- */
+    extern void _mimeError(mime_t *mime, const char *format, ...) _CUPS_FORMAT(2, 3);
 
-extern void	_mimeError(mime_t *mime, const char *format, ...) _CUPS_FORMAT(2, 3);
-
-
-#  ifdef __cplusplus
+#ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#endif /* __cplusplus */
 #endif /* !_CUPS_MIME_PRIVATE_H_ */

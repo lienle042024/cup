@@ -13,22 +13,18 @@
 
 #include "raster-private.h"
 
-
 /*
  * These stubs wrap the real functions in libcups - this allows one library to
  * provide all of the CUPS API functions while still supporting the old split
  * library organization...
  */
 
-
 /*
  * Local functions...
  */
 
-static ssize_t	cups_read_fd(void *ctx, unsigned char *buf, size_t bytes);
-static ssize_t	cups_write_fd(void *ctx, unsigned char *buf, size_t bytes);
-
-
+static ssize_t cups_read_fd(void *ctx, unsigned char *buf, size_t bytes);
+static ssize_t cups_write_fd(void *ctx, unsigned char *buf, size_t bytes);
 
 /*
  * 'cupsRasterClose()' - Close a raster stream.
@@ -37,12 +33,10 @@ static ssize_t	cups_write_fd(void *ctx, unsigned char *buf, size_t bytes);
  * separately as needed.
  */
 
-void
-cupsRasterClose(cups_raster_t *r)	/* I - Stream to close */
+void cupsRasterClose(cups_raster_t *r) /* I - Stream to close */
 {
   _cupsRasterDelete(r);
 }
-
 
 /*
  * 'cupsRasterErrorString()' - Return the last error from a raster function.
@@ -52,12 +46,11 @@ cupsRasterClose(cups_raster_t *r)	/* I - Stream to close */
  * @since CUPS 1.3/macOS 10.5@
  */
 
-const char *				/* O - Last error or `NULL` */
+const char * /* O - Last error or `NULL` */
 cupsRasterErrorString(void)
 {
   return (_cupsRasterErrorString());
 }
-
 
 /*
  * 'cupsRasterInitPWGHeader()' - Initialize a page header for PWG Raster output.
@@ -76,19 +69,18 @@ cupsRasterErrorString(void)
  * @since CUPS 2.2/macOS 10.12@
  */
 
-int					/* O - 1 on success, 0 on failure */
+int /* O - 1 on success, 0 on failure */
 cupsRasterInitPWGHeader(
-    cups_page_header2_t *h,		/* I - Page header */
-    pwg_media_t         *media,		/* I - PWG media information */
-    const char          *type,		/* I - PWG raster type string */
-    int                 xdpi,		/* I - Cross-feed direction (horizontal) resolution */
-    int                 ydpi,		/* I - Feed direction (vertical) resolution */
-    const char          *sides,		/* I - IPP "sides" option value */
-    const char          *sheet_back)	/* I - Transform for back side or @code NULL@ for none */
+    cups_page_header2_t *h, /* I - Page header */
+    pwg_media_t *media,     /* I - PWG media information */
+    const char *type,       /* I - PWG raster type string */
+    int xdpi,               /* I - Cross-feed direction (horizontal) resolution */
+    int ydpi,               /* I - Feed direction (vertical) resolution */
+    const char *sides,      /* I - IPP "sides" option value */
+    const char *sheet_back) /* I - Transform for back side or @code NULL@ for none */
 {
   return (_cupsRasterInitPWGHeader(h, media, type, xdpi, ydpi, sides, sheet_back));
 }
-
 
 /*
  * 'cupsRasterOpen()' - Open a raster stream using a file descriptor.
@@ -104,19 +96,18 @@ cupsRasterInitPWGHeader(
  * 100-300% execution time overhead.
  */
 
-cups_raster_t *				/* O - New stream */
-cupsRasterOpen(int         fd,		/* I - File descriptor */
-               cups_mode_t mode)	/* I - Mode - @code CUPS_RASTER_READ@,
-	                                       @code CUPS_RASTER_WRITE@,
-					       @code CUPS_RASTER_WRITE_COMPRESSED@,
-					       or @code CUPS_RASTER_WRITE_PWG@ */
+cups_raster_t *                  /* O - New stream */
+cupsRasterOpen(int fd,           /* I - File descriptor */
+               cups_mode_t mode) /* I - Mode - @code CUPS_RASTER_READ@,
+                                        @code CUPS_RASTER_WRITE@,
+                @code CUPS_RASTER_WRITE_COMPRESSED@,
+                or @code CUPS_RASTER_WRITE_PWG@ */
 {
   if (mode == CUPS_RASTER_READ)
     return (_cupsRasterNew(cups_read_fd, (void *)((intptr_t)fd), mode));
   else
     return (_cupsRasterNew(cups_write_fd, (void *)((intptr_t)fd), mode));
 }
-
 
 /*
  * 'cupsRasterOpenIO()' - Open a raster stream using a callback function.
@@ -130,18 +121,17 @@ cupsRasterOpen(int         fd,		/* I - File descriptor */
  * 100-300% execution time overhead.
  */
 
-cups_raster_t *				/* O - New stream */
+cups_raster_t * /* O - New stream */
 cupsRasterOpenIO(
-    cups_raster_iocb_t iocb,		/* I - Read/write callback */
-    void               *ctx,		/* I - Context pointer for callback */
-    cups_mode_t        mode)		/* I - Mode - @code CUPS_RASTER_READ@,
-	                                       @code CUPS_RASTER_WRITE@,
-					       @code CUPS_RASTER_WRITE_COMPRESSED@,
-					       or @code CUPS_RASTER_WRITE_PWG@ */
+    cups_raster_iocb_t iocb, /* I - Read/write callback */
+    void *ctx,               /* I - Context pointer for callback */
+    cups_mode_t mode)        /* I - Mode - @code CUPS_RASTER_READ@,
+                                      @code CUPS_RASTER_WRITE@,
+              @code CUPS_RASTER_WRITE_COMPRESSED@,
+              or @code CUPS_RASTER_WRITE_PWG@ */
 {
   return (_cupsRasterNew(iocb, ctx, mode));
 }
-
 
 /*
  * 'cupsRasterReadHeader()' - Read a raster page header and store it in a
@@ -156,14 +146,14 @@ cupsRasterOpenIO(
  * @deprecated@
  */
 
-unsigned				/* O - 1 on success, 0 on failure/end-of-file */
+unsigned /* O - 1 on success, 0 on failure/end-of-file */
 cupsRasterReadHeader(
-    cups_raster_t      *r,		/* I - Raster stream */
-    cups_page_header_t *h)		/* I - Pointer to header data */
+    cups_raster_t *r,      /* I - Raster stream */
+    cups_page_header_t *h) /* I - Pointer to header data */
 {
- /*
-  * Get the raster header...
-  */
+  /*
+   * Get the raster header...
+   */
 
   if (!_cupsRasterReadHeader(r))
   {
@@ -171,14 +161,13 @@ cupsRasterReadHeader(
     return (0);
   }
 
- /*
-  * Copy the header to the user-supplied buffer...
-  */
+  /*
+   * Copy the header to the user-supplied buffer...
+   */
 
   memcpy(h, &(r->header), sizeof(cups_page_header_t));
   return (1);
 }
-
 
 /*
  * 'cupsRasterReadHeader2()' - Read a raster page header and store it in a
@@ -187,14 +176,14 @@ cupsRasterReadHeader(
  * @since CUPS 1.2/macOS 10.5@
  */
 
-unsigned				/* O - 1 on success, 0 on failure/end-of-file */
+unsigned /* O - 1 on success, 0 on failure/end-of-file */
 cupsRasterReadHeader2(
-    cups_raster_t       *r,		/* I - Raster stream */
-    cups_page_header2_t *h)		/* I - Pointer to header data */
+    cups_raster_t *r,       /* I - Raster stream */
+    cups_page_header2_t *h) /* I - Pointer to header data */
 {
- /*
-  * Get the raster header...
-  */
+  /*
+   * Get the raster header...
+   */
 
   if (!_cupsRasterReadHeader(r))
   {
@@ -202,14 +191,13 @@ cupsRasterReadHeader2(
     return (0);
   }
 
- /*
-  * Copy the header to the user-supplied buffer...
-  */
+  /*
+   * Copy the header to the user-supplied buffer...
+   */
 
   memcpy(h, &(r->header), sizeof(cups_page_header2_t));
   return (1);
 }
-
 
 /*
  * 'cupsRasterReadPixels()' - Read raster pixels.
@@ -219,15 +207,14 @@ cupsRasterReadHeader2(
  * the line buffer and as the number of bytes to read.
  */
 
-unsigned				/* O - Number of bytes read */
+unsigned /* O - Number of bytes read */
 cupsRasterReadPixels(
-    cups_raster_t *r,			/* I - Raster stream */
-    unsigned char *p,			/* I - Pointer to pixel buffer */
-    unsigned      len)			/* I - Number of bytes to read */
+    cups_raster_t *r, /* I - Raster stream */
+    unsigned char *p, /* I - Pointer to pixel buffer */
+    unsigned len)     /* I - Number of bytes to read */
 {
   return (_cupsRasterReadPixels(r, p, len));
 }
-
 
 /*
  * 'cupsRasterWriteHeader()' - Write a raster page header from a version 1 page
@@ -238,24 +225,23 @@ cupsRasterReadPixels(
  * @deprecated@
  */
 
-unsigned				/* O - 1 on success, 0 on failure */
+unsigned /* O - 1 on success, 0 on failure */
 cupsRasterWriteHeader(
-    cups_raster_t      *r,		/* I - Raster stream */
-    cups_page_header_t *h)		/* I - Raster page header */
+    cups_raster_t *r,      /* I - Raster stream */
+    cups_page_header_t *h) /* I - Raster page header */
 {
   if (r == NULL || r->mode == CUPS_RASTER_READ)
     return (0);
 
- /*
-  * Make a copy of the header and write using the private function...
-  */
+  /*
+   * Make a copy of the header and write using the private function...
+   */
 
   memset(&(r->header), 0, sizeof(r->header));
   memcpy(&(r->header), h, sizeof(cups_page_header_t));
 
   return (_cupsRasterWriteHeader(r));
 }
-
 
 /*
  * 'cupsRasterWriteHeader2()' - Write a raster page header from a version 2
@@ -266,24 +252,23 @@ cupsRasterWriteHeader(
  * @since CUPS 1.2/macOS 10.5@
  */
 
-unsigned				/* O - 1 on success, 0 on failure */
+unsigned /* O - 1 on success, 0 on failure */
 cupsRasterWriteHeader2(
-    cups_raster_t       *r,		/* I - Raster stream */
-    cups_page_header2_t *h)		/* I - Raster page header */
+    cups_raster_t *r,       /* I - Raster stream */
+    cups_page_header2_t *h) /* I - Raster page header */
 {
   if (r == NULL || r->mode == CUPS_RASTER_READ)
     return (0);
 
- /*
-  * Make a copy of the header, and compute the number of raster
-  * lines in the page image...
-  */
+  /*
+   * Make a copy of the header, and compute the number of raster
+   * lines in the page image...
+   */
 
   memcpy(&(r->header), h, sizeof(cups_page_header2_t));
 
   return (_cupsRasterWriteHeader(r));
 }
-
 
 /*
  * 'cupsRasterWritePixels()' - Write raster pixels.
@@ -293,29 +278,27 @@ cupsRasterWriteHeader2(
  * the line buffer and as the number of bytes to write.
  */
 
-unsigned				/* O - Number of bytes written */
+unsigned /* O - Number of bytes written */
 cupsRasterWritePixels(
-    cups_raster_t *r,			/* I - Raster stream */
-    unsigned char *p,			/* I - Bytes to write */
-    unsigned      len)			/* I - Number of bytes to write */
+    cups_raster_t *r, /* I - Raster stream */
+    unsigned char *p, /* I - Bytes to write */
+    unsigned len)     /* I - Number of bytes to write */
 {
   return (_cupsRasterWritePixels(r, p, len));
 }
-
 
 /*
  * 'cups_read_fd()' - Read bytes from a file.
  */
 
-static ssize_t				/* O - Bytes read or -1 */
-cups_read_fd(void          *ctx,	/* I - File descriptor as pointer */
-             unsigned char *buf,	/* I - Buffer for read */
-	     size_t        bytes)	/* I - Maximum number of bytes to read */
+static ssize_t                   /* O - Bytes read or -1 */
+cups_read_fd(void *ctx,          /* I - File descriptor as pointer */
+             unsigned char *buf, /* I - Buffer for read */
+             size_t bytes)       /* I - Maximum number of bytes to read */
 {
-  int		fd = (int)((intptr_t)ctx);
-					/* File descriptor */
-  ssize_t	count;			/* Number of bytes read */
-
+  int fd = (int)((intptr_t)ctx);
+  /* File descriptor */
+  ssize_t count; /* Number of bytes read */
 
 #ifdef _WIN32 /* Sigh */
   while ((count = read(fd, buf, (unsigned)bytes)) < 0)
@@ -328,20 +311,18 @@ cups_read_fd(void          *ctx,	/* I - File descriptor as pointer */
   return (count);
 }
 
-
 /*
  * 'cups_write_fd()' - Write bytes to a file.
  */
 
-static ssize_t				/* O - Bytes written or -1 */
-cups_write_fd(void          *ctx,	/* I - File descriptor pointer */
-              unsigned char *buf,	/* I - Bytes to write */
-	      size_t        bytes)	/* I - Number of bytes to write */
+static ssize_t                    /* O - Bytes written or -1 */
+cups_write_fd(void *ctx,          /* I - File descriptor pointer */
+              unsigned char *buf, /* I - Bytes to write */
+              size_t bytes)       /* I - Number of bytes to write */
 {
-  int		fd = (int)((intptr_t)ctx);
-					/* File descriptor */
-  ssize_t	count;			/* Number of bytes written */
-
+  int fd = (int)((intptr_t)ctx);
+  /* File descriptor */
+  ssize_t count; /* Number of bytes written */
 
 #ifdef _WIN32 /* Sigh */
   while ((count = write(fd, buf, (unsigned)bytes)) < 0)

@@ -39,37 +39,39 @@
 
   1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
   1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
-	added conditionalization for C++ compilation from Martin
-	Purschke <purschke@bnl.gov>.
+  added conditionalization for C++ compilation from Martin
+  Purschke <purschke@bnl.gov>.
   1999-05-03 lpd Original version.
  */
 
 #ifndef _CUPS_MD5_INTERNAL_H_
-#  define _CUPS_MD5_INTERNAL_H_
+#define _CUPS_MD5_INTERNAL_H_
 
-#  include <cups/versioning.h>
+#include <cups/versioning.h>
 
 /* Define the state of the MD5 Algorithm. */
-typedef struct _cups_md5_state_s {
-    unsigned int count[2];		/* message length in bits, lsw first */
-    unsigned int abcd[4];		/* digest buffer */
-    unsigned char buf[64];		/* accumulate block */
+typedef struct _cups_md5_state_s
+{
+  unsigned int count[2]; /* message length in bits, lsw first */
+  unsigned int abcd[4];  /* digest buffer */
+  unsigned char buf[64]; /* accumulate block */
 } _cups_md5_state_t;
 
-#  ifdef __cplusplus
-extern "C" {
-#  endif /* __cplusplus */
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
 
-/* Initialize the algorithm. */
-void _cupsMD5Init(_cups_md5_state_t *pms) _CUPS_INTERNAL;
+  /* Initialize the algorithm. */
+  void _cupsMD5Init(_cups_md5_state_t *pms) _CUPS_INTERNAL;
 
-/* Append a string to the message. */
-void _cupsMD5Append(_cups_md5_state_t *pms, const unsigned char *data, int nbytes) _CUPS_INTERNAL;
+  /* Append a string to the message. */
+  void _cupsMD5Append(_cups_md5_state_t *pms, const unsigned char *data, int nbytes) _CUPS_INTERNAL;
 
-/* Finish the message and return the digest. */
-void _cupsMD5Finish(_cups_md5_state_t *pms, unsigned char digest[16]) _CUPS_INTERNAL;
+  /* Finish the message and return the digest. */
+  void _cupsMD5Finish(_cups_md5_state_t *pms, unsigned char digest[16]) _CUPS_INTERNAL;
 
-#  ifdef __cplusplus
-}  /* end extern "C" */
-#  endif /* __cplusplus */
+#ifdef __cplusplus
+} /* end extern "C" */
+#endif /* __cplusplus */
 #endif /* !_CUPS_MD5_INTERNAL_H_ */

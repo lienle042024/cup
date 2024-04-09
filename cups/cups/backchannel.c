@@ -15,20 +15,18 @@
 #include "sidechannel.h"
 #include <errno.h>
 #ifdef _WIN32
-#  include <io.h>
-#  include <fcntl.h>
+#include <io.h>
+#include <fcntl.h>
 #else
-#  include <sys/time.h>
+#include <sys/time.h>
 #endif /* _WIN32 */
-
 
 /*
  * Local functions...
  */
 
-static void	cups_setup(fd_set *set, struct timeval *tval,
-		           double timeout);
-
+static void cups_setup(fd_set *set, struct timeval *tval,
+                       double timeout);
 
 /*
  * 'cupsBackChannelRead()' - Read data from the backchannel.
@@ -40,19 +38,18 @@ static void	cups_setup(fd_set *set, struct timeval *tval,
  * @since CUPS 1.2/macOS 10.5@
  */
 
-ssize_t					/* O - Bytes read or -1 on error */
-cupsBackChannelRead(char   *buffer,	/* I - Buffer to read into */
-                    size_t bytes,	/* I - Bytes to read */
-		    double timeout)	/* I - Timeout in seconds, typically 0.0 to poll */
+ssize_t                             /* O - Bytes read or -1 on error */
+cupsBackChannelRead(char *buffer,   /* I - Buffer to read into */
+                    size_t bytes,   /* I - Bytes to read */
+                    double timeout) /* I - Timeout in seconds, typically 0.0 to poll */
 {
-  fd_set	input;			/* Input set */
-  struct timeval tval;			/* Timeout value */
-  int		status;			/* Select status */
+  fd_set input;        /* Input set */
+  struct timeval tval; /* Timeout value */
+  int status;          /* Select status */
 
-
- /*
-  * Wait for input ready.
-  */
+  /*
+   * Wait for input ready.
+   */
 
   do
   {
@@ -62,15 +59,14 @@ cupsBackChannelRead(char   *buffer,	/* I - Buffer to read into */
       status = select(4, &input, NULL, NULL, NULL);
     else
       status = select(4, &input, NULL, NULL, &tval);
-  }
-  while (status < 0 && errno != EINTR && errno != EAGAIN);
+  } while (status < 0 && errno != EINTR && errno != EAGAIN);
 
   if (status < 0)
-    return (-1);			/* Timeout! */
+    return (-1); /* Timeout! */
 
- /*
-  * Read bytes from the pipe...
-  */
+    /*
+     * Read bytes from the pipe...
+     */
 
 #ifdef _WIN32
   return ((ssize_t)_read(3, buffer, (unsigned)bytes));
@@ -78,7 +74,6 @@ cupsBackChannelRead(char   *buffer,	/* I - Buffer to read into */
   return (read(3, buffer, bytes));
 #endif /* _WIN32 */
 }
-
 
 /*
  * 'cupsBackChannelWrite()' - Write data to the backchannel.
@@ -91,48 +86,46 @@ cupsBackChannelRead(char   *buffer,	/* I - Buffer to read into */
  * @since CUPS 1.2/macOS 10.5@
  */
 
-ssize_t					/* O - Bytes written or -1 on error */
+ssize_t /* O - Bytes written or -1 on error */
 cupsBackChannelWrite(
-    const char *buffer,			/* I - Buffer to write */
-    size_t     bytes,			/* I - Bytes to write */
-    double     timeout)			/* I - Timeout in seconds, typically 1.0 */
+    const char *buffer, /* I - Buffer to write */
+    size_t bytes,       /* I - Bytes to write */
+    double timeout)     /* I - Timeout in seconds, typically 1.0 */
 {
-  fd_set	output;			/* Output set */
-  struct timeval tval;			/* Timeout value */
-  int		status;			/* Select status */
-  ssize_t	count;			/* Current bytes */
-  size_t	total;			/* Total bytes */
+  fd_set output;       /* Output set */
+  struct timeval tval; /* Timeout value */
+  int status;          /* Select status */
+  ssize_t count;       /* Current bytes */
+  size_t total;        /* Total bytes */
 
-
- /*
-  * Write all bytes...
-  */
+  /*
+   * Write all bytes...
+   */
 
   total = 0;
 
   while (total < bytes)
   {
-   /*
-    * Wait for write-ready...
-    */
+    /*
+     * Wait for write-ready...
+     */
 
     do
     {
       cups_setup(&output, &tval, timeout);
 
       if (timeout < 0.0)
-	status = select(4, NULL, &output, NULL, NULL);
+        status = select(4, NULL, &output, NULL, NULL);
       else
-	status = select(4, NULL, &output, NULL, &tval);
-    }
-    while (status < 0 && errno != EINTR && errno != EAGAIN);
+        status = select(4, NULL, &output, NULL, &tval);
+    } while (status < 0 && errno != EINTR && errno != EAGAIN);
 
     if (status <= 0)
-      return (-1);			/* Timeout! */
+      return (-1); /* Timeout! */
 
-   /*
-    * Write bytes to the pipe...
-    */
+      /*
+       * Write bytes to the pipe...
+       */
 
 #ifdef _WIN32
     count = (ssize_t)_write(3, buffer, (unsigned)(bytes - total));
@@ -142,36 +135,35 @@ cupsBackChannelWrite(
 
     if (count < 0)
     {
-     /*
-      * Write error - abort on fatal errors...
-      */
+      /*
+       * Write error - abort on fatal errors...
+       */
 
       if (errno != EINTR && errno != EAGAIN)
         return (-1);
     }
     else
     {
-     /*
-      * Write succeeded, update buffer pointer and total count...
-      */
+      /*
+       * Write succeeded, update buffer pointer and total count...
+       */
 
       buffer += count;
-      total  += (size_t)count;
+      total += (size_t)count;
     }
   }
 
   return ((ssize_t)bytes);
 }
 
-
 /*
  * 'cups_setup()' - Setup select()
  */
 
 static void
-cups_setup(fd_set         *set,		/* I - Set for select() */
-           struct timeval *tval,	/* I - Timer value */
-	   double         timeout)	/* I - Timeout in seconds */
+cups_setup(fd_set *set,          /* I - Set for select() */
+           struct timeval *tval, /* I - Timer value */
+           double timeout)       /* I - Timeout in seconds */
 {
   tval->tv_sec = (int)timeout;
   tval->tv_usec = (int)(1000000.0 * (timeout - tval->tv_sec));

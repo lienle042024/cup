@@ -14,7 +14,6 @@
 #include "debug-internal.h"
 #include "adminutil.h"
 
-
 /*
  * 'cupsGetDevices()' - Get available printer devices.
  *
@@ -30,33 +29,32 @@
  * @deprecated@
  */
 
-ipp_status_t				/* O - Request status - @code IPP_OK@ on success. */
+ipp_status_t /* O - Request status - @code IPP_OK@ on success. */
 cupsGetDevices(
-    http_t           *http,		/* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
-    int              timeout,		/* I - Timeout in seconds or @code CUPS_TIMEOUT_DEFAULT@ */
-    const char       *include_schemes,	/* I - Comma-separated URI schemes to include or @code CUPS_INCLUDE_ALL@ */
-    const char       *exclude_schemes,	/* I - Comma-separated URI schemes to exclude or @code CUPS_EXCLUDE_NONE@ */
-    cups_device_cb_t callback,		/* I - Callback function */
-    void             *user_data)	/* I - User data pointer */
+    http_t *http,                /* I - Connection to server or @code CUPS_HTTP_DEFAULT@ */
+    int timeout,                 /* I - Timeout in seconds or @code CUPS_TIMEOUT_DEFAULT@ */
+    const char *include_schemes, /* I - Comma-separated URI schemes to include or @code CUPS_INCLUDE_ALL@ */
+    const char *exclude_schemes, /* I - Comma-separated URI schemes to exclude or @code CUPS_EXCLUDE_NONE@ */
+    cups_device_cb_t callback,   /* I - Callback function */
+    void *user_data)             /* I - User data pointer */
 {
-  ipp_t		*request,		/* CUPS-Get-Devices request */
-		*response;		/* CUPS-Get-Devices response */
-  ipp_attribute_t *attr;		/* Current attribute */
-  const char	*device_class,		/* device-class value */
-		*device_id,		/* device-id value */
-		*device_info,		/* device-info value */
-		*device_location,	/* device-location value */
-		*device_make_and_model,	/* device-make-and-model value */
-		*device_uri;		/* device-uri value */
-  int		blocking;		/* Current blocking-IO mode */
-  cups_option_t	option;			/* in/exclude-schemes option */
-  http_status_t	status;			/* HTTP status of request */
-  ipp_state_t	state;			/* IPP response state */
+  ipp_t *request,             /* CUPS-Get-Devices request */
+      *response;              /* CUPS-Get-Devices response */
+  ipp_attribute_t *attr;      /* Current attribute */
+  const char *device_class,   /* device-class value */
+      *device_id,             /* device-id value */
+      *device_info,           /* device-info value */
+      *device_location,       /* device-location value */
+      *device_make_and_model, /* device-make-and-model value */
+      *device_uri;            /* device-uri value */
+  int blocking;               /* Current blocking-IO mode */
+  cups_option_t option;       /* in/exclude-schemes option */
+  http_status_t status;       /* HTTP status of request */
+  ipp_state_t state;          /* IPP response state */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   DEBUG_printf(("cupsGetDevices(http=%p, timeout=%d, include_schemes=\"%s\", exclude_schemes=\"%s\", callback=%p, user_data=%p)", (void *)http, timeout, include_schemes, exclude_schemes, (void *)callback, user_data));
 
@@ -69,9 +67,9 @@ cupsGetDevices(
   if (!http)
     return (IPP_STATUS_ERROR_SERVICE_UNAVAILABLE);
 
- /*
-  * Create a CUPS-Get-Devices request...
-  */
+  /*
+   * Create a CUPS-Get-Devices request...
+   */
 
   request = ippNewRequest(IPP_OP_CUPS_GET_DEVICES);
 
@@ -81,7 +79,7 @@ cupsGetDevices(
 
   if (include_schemes)
   {
-    option.name  = "include-schemes";
+    option.name = "include-schemes";
     option.value = (char *)include_schemes;
 
     cupsEncodeOptions2(request, 1, &option, IPP_TAG_OPERATION);
@@ -89,15 +87,15 @@ cupsGetDevices(
 
   if (exclude_schemes)
   {
-    option.name  = "exclude-schemes";
+    option.name = "exclude-schemes";
     option.value = (char *)exclude_schemes;
 
     cupsEncodeOptions2(request, 1, &option, IPP_TAG_OPERATION);
   }
 
- /*
-  * Send the request and do any necessary authentication...
-  */
+  /*
+   * Send the request and do any necessary authentication...
+   */
 
   do
   {
@@ -114,38 +112,37 @@ cupsGetDevices(
 
       if (status == HTTP_STATUS_UNAUTHORIZED)
       {
-       /*
-	* See if we can do authentication...
-	*/
+        /*
+         * See if we can do authentication...
+         */
 
-	DEBUG_puts("2cupsGetDevices: Need authorization...");
+        DEBUG_puts("2cupsGetDevices: Need authorization...");
 
-	if (!cupsDoAuthentication(http, "POST", "/"))
-	  httpReconnect2(http, 30000, NULL);
-	else
-	{
-	  status = HTTP_STATUS_CUPS_AUTHORIZATION_CANCELED;
-	  break;
-	}
+        if (!cupsDoAuthentication(http, "POST", "/"))
+          httpReconnect2(http, 30000, NULL);
+        else
+        {
+          status = HTTP_STATUS_CUPS_AUTHORIZATION_CANCELED;
+          break;
+        }
       }
 
 #ifdef HAVE_SSL
       else if (status == HTTP_STATUS_UPGRADE_REQUIRED)
       {
-       /*
-	* Force a reconnect with encryption...
-	*/
+        /*
+         * Force a reconnect with encryption...
+         */
 
-	DEBUG_puts("2cupsGetDevices: Need encryption...");
+        DEBUG_puts("2cupsGetDevices: Need encryption...");
 
-	if (!httpReconnect2(http, 30000, NULL))
-	  httpEncryption(http, HTTP_ENCRYPTION_REQUIRED);
+        if (!httpReconnect2(http, 30000, NULL))
+          httpEncryption(http, HTTP_ENCRYPTION_REQUIRED);
       }
 #endif /* HAVE_SSL */
     }
-  }
-  while (status == HTTP_STATUS_UNAUTHORIZED ||
-         status == HTTP_STATUS_UPGRADE_REQUIRED);
+  } while (status == HTTP_STATUS_UNAUTHORIZED ||
+           status == HTTP_STATUS_UPGRADE_REQUIRED);
 
   DEBUG_printf(("2cupsGetDevices: status=%d", status));
 
@@ -157,21 +154,21 @@ cupsGetDevices(
     return (cupsLastError());
   }
 
- /*
-  * Read the response in non-blocking mode...
-  */
+  /*
+   * Read the response in non-blocking mode...
+   */
 
   blocking = httpGetBlocking(http);
   httpBlocking(http, 0);
 
-  response              = ippNew();
-  device_class          = NULL;
-  device_id             = NULL;
-  device_info           = NULL;
-  device_location       = "";
+  response = ippNew();
+  device_class = NULL;
+  device_id = NULL;
+  device_info = NULL;
+  device_location = "";
   device_make_and_model = NULL;
-  device_uri            = NULL;
-  attr                  = NULL;
+  device_uri = NULL;
+  attr = NULL;
 
   DEBUG_puts("2cupsGetDevices: Reading response...");
 
@@ -188,7 +185,7 @@ cupsGetDevices(
     while (attr != response->last)
     {
       if (!attr)
-	attr = response->attrs;
+        attr = response->attrs;
       else
         attr = attr->next;
 
@@ -198,17 +195,17 @@ cupsGetDevices(
       if (!attr->name)
       {
         if (device_class && device_id && device_info && device_make_and_model &&
-	    device_uri)
+            device_uri)
           (*callback)(device_class, device_id, device_info,
-	              device_make_and_model, device_uri, device_location,
-		      user_data);
+                      device_make_and_model, device_uri, device_location,
+                      user_data);
 
-	device_class          = NULL;
-	device_id             = NULL;
-	device_info           = NULL;
-	device_location       = "";
-	device_make_and_model = NULL;
-	device_uri            = NULL;
+        device_class = NULL;
+        device_id = NULL;
+        device_info = NULL;
+        device_location = "";
+        device_make_and_model = NULL;
+        device_uri = NULL;
       }
       else if (!strcmp(attr->name, "device-class") &&
                attr->value_tag == IPP_TAG_KEYWORD)
@@ -229,19 +226,18 @@ cupsGetDevices(
                attr->value_tag == IPP_TAG_URI)
         device_uri = attr->values[0].string.text;
     }
-  }
-  while (state != IPP_STATE_DATA);
+  } while (state != IPP_STATE_DATA);
 
   DEBUG_printf(("2cupsGetDevices: state=%d, response->last=%p", state, (void *)response->last));
 
   if (device_class && device_id && device_info && device_make_and_model &&
       device_uri)
     (*callback)(device_class, device_id, device_info,
-		device_make_and_model, device_uri, device_location, user_data);
+                device_make_and_model, device_uri, device_location, user_data);
 
- /*
-  * Set the IPP status and return...
-  */
+  /*
+   * Set the IPP status and return...
+   */
 
   httpBlocking(http, blocking);
   httpFlush(http);

@@ -16,24 +16,22 @@
 #include "cups-private.h"
 #include "debug-internal.h"
 #ifdef _WIN32
-#  include <io.h>
+#include <io.h>
 #else
-#  include <unistd.h>
-#  include <sys/select.h>
-#  include <sys/time.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #endif /* _WIN32 */
 #ifdef HAVE_POLL
-#  include <poll.h>
+#include <poll.h>
 #endif /* HAVE_POLL */
-
 
 /*
  * Buffer size for side-channel requests...
  */
 
-#define _CUPS_SC_MAX_DATA	65535
-#define _CUPS_SC_MAX_BUFFER	65540
-
+#define _CUPS_SC_MAX_DATA 65535
+#define _CUPS_SC_MAX_BUFFER 65540
 
 /*
  * 'cupsSideChannelDoRequest()' - Send a side-channel command to a backend and wait for a response.
@@ -51,16 +49,15 @@
  * @since CUPS 1.3/macOS 10.5@
  */
 
-cups_sc_status_t			/* O  - Status of command */
+cups_sc_status_t /* O  - Status of command */
 cupsSideChannelDoRequest(
-    cups_sc_command_t command,		/* I  - Command to send */
-    char              *data,		/* O  - Response data buffer pointer */
-    int               *datalen,		/* IO - Size of data buffer on entry, number of bytes in buffer on return */
-    double            timeout)		/* I  - Timeout in seconds */
+    cups_sc_command_t command, /* I  - Command to send */
+    char *data,                /* O  - Response data buffer pointer */
+    int *datalen,              /* IO - Size of data buffer on entry, number of bytes in buffer on return */
+    double timeout)            /* I  - Timeout in seconds */
 {
-  cups_sc_status_t	status;		/* Status of command */
-  cups_sc_command_t	rcommand;	/* Response command */
-
+  cups_sc_status_t status;    /* Status of command */
+  cups_sc_command_t rcommand; /* Response command */
 
   if (cupsSideChannelWrite(command, CUPS_SC_STATUS_NONE, NULL, 0, timeout))
     return (CUPS_SC_STATUS_TIMEOUT);
@@ -73,7 +70,6 @@ cupsSideChannelDoRequest(
 
   return (status);
 }
-
 
 /*
  * 'cupsSideChannelRead()' - Read a side-channel message.
@@ -90,60 +86,60 @@ cupsSideChannelDoRequest(
  * @since CUPS 1.3/macOS 10.5@
  */
 
-int					/* O - 0 on success, -1 on error */
+int /* O - 0 on success, -1 on error */
 cupsSideChannelRead(
-    cups_sc_command_t *command,		/* O - Command code */
-    cups_sc_status_t  *status,		/* O - Status code */
-    char              *data,		/* O - Data buffer pointer */
-    int               *datalen,		/* IO - Size of data buffer on entry, number of bytes in buffer on return */
-    double            timeout)		/* I  - Timeout in seconds */
+    cups_sc_command_t *command, /* O - Command code */
+    cups_sc_status_t *status,   /* O - Status code */
+    char *data,                 /* O - Data buffer pointer */
+    int *datalen,               /* IO - Size of data buffer on entry, number of bytes in buffer on return */
+    double timeout)             /* I  - Timeout in seconds */
 {
-  char		*buffer;		/* Message buffer */
-  ssize_t	bytes;			/* Bytes read */
-  int		templen;		/* Data length from message */
-  int		nfds;			/* Number of file descriptors */
+  char *buffer;  /* Message buffer */
+  ssize_t bytes; /* Bytes read */
+  int templen;   /* Data length from message */
+  int nfds;      /* Number of file descriptors */
 #ifdef HAVE_POLL
-  struct pollfd	pfd;			/* Poll structure for poll() */
-#else /* select() */
-  fd_set	input_set;		/* Input set for select() */
-  struct timeval stimeout;		/* Timeout value for select() */
-#endif /* HAVE_POLL */
-
+  struct pollfd pfd; /* Poll structure for poll() */
+#else                /* select() */
+  fd_set input_set;        /* Input set for select() */
+  struct timeval stimeout; /* Timeout value for select() */
+#endif               /* HAVE_POLL */
 
   DEBUG_printf(("cupsSideChannelRead(command=%p, status=%p, data=%p, "
-                "datalen=%p(%d), timeout=%.3f)", command, status, data,
-		datalen, datalen ? *datalen : -1, timeout));
+                "datalen=%p(%d), timeout=%.3f)",
+                command, status, data,
+                datalen, datalen ? *datalen : -1, timeout));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!command || !status)
     return (-1);
 
- /*
-  * See if we have pending data on the side-channel socket...
-  */
+    /*
+     * See if we have pending data on the side-channel socket...
+     */
 
 #ifdef HAVE_POLL
-  pfd.fd     = CUPS_SC_FD;
+  pfd.fd = CUPS_SC_FD;
   pfd.events = POLLIN;
 
   while ((nfds = poll(&pfd, 1,
-		      timeout < 0.0 ? -1 : (int)(timeout * 1000))) < 0 &&
-	 (errno == EINTR || errno == EAGAIN))
+                      timeout < 0.0 ? -1 : (int)(timeout * 1000))) < 0 &&
+         (errno == EINTR || errno == EAGAIN))
     ;
 
 #else /* select() */
   FD_ZERO(&input_set);
   FD_SET(CUPS_SC_FD, &input_set);
 
-  stimeout.tv_sec  = (int)timeout;
+  stimeout.tv_sec = (int)timeout;
   stimeout.tv_usec = (int)(timeout * 1000000) % 1000000;
 
   while ((nfds = select(CUPS_SC_FD + 1, &input_set, NULL, NULL,
-			timeout < 0.0 ? NULL : &stimeout)) < 0 &&
-	 (errno == EINTR || errno == EAGAIN))
+                        timeout < 0.0 ? NULL : &stimeout)) < 0 &&
+         (errno == EINTR || errno == EAGAIN))
     ;
 
 #endif /* HAVE_POLL */
@@ -151,25 +147,25 @@ cupsSideChannelRead(
   if (nfds < 1)
   {
     *command = CUPS_SC_CMD_NONE;
-    *status  = nfds==0 ? CUPS_SC_STATUS_TIMEOUT : CUPS_SC_STATUS_IO_ERROR;
+    *status = nfds == 0 ? CUPS_SC_STATUS_TIMEOUT : CUPS_SC_STATUS_IO_ERROR;
     return (-1);
   }
 
- /*
-  * Read a side-channel message for the format:
-  *
-  * Byte(s)  Description
-  * -------  -------------------------------------------
-  * 0        Command code
-  * 1        Status code
-  * 2-3      Data length (network byte order)
-  * 4-N      Data
-  */
+  /*
+   * Read a side-channel message for the format:
+   *
+   * Byte(s)  Description
+   * -------  -------------------------------------------
+   * 0        Command code
+   * 1        Status code
+   * 2-3      Data length (network byte order)
+   * 4-N      Data
+   */
 
   if ((buffer = _cupsBufferGet(_CUPS_SC_MAX_BUFFER)) == NULL)
   {
     *command = CUPS_SC_CMD_NONE;
-    *status  = CUPS_SC_STATUS_TOO_BIG;
+    *status = CUPS_SC_STATUS_TOO_BIG;
 
     return (-1);
   }
@@ -182,14 +178,14 @@ cupsSideChannelRead(
       _cupsBufferRelease(buffer);
 
       *command = CUPS_SC_CMD_NONE;
-      *status  = CUPS_SC_STATUS_IO_ERROR;
+      *status = CUPS_SC_STATUS_IO_ERROR;
 
       return (-1);
     }
 
- /*
-  * Watch for EOF or too few bytes...
-  */
+  /*
+   * Watch for EOF or too few bytes...
+   */
 
   if (bytes < 4)
   {
@@ -198,14 +194,14 @@ cupsSideChannelRead(
     _cupsBufferRelease(buffer);
 
     *command = CUPS_SC_CMD_NONE;
-    *status  = CUPS_SC_STATUS_BAD_MESSAGE;
+    *status = CUPS_SC_STATUS_BAD_MESSAGE;
 
     return (-1);
   }
 
- /*
-  * Validate the command code in the message...
-  */
+  /*
+   * Validate the command code in the message...
+   */
 
   if (buffer[0] < CUPS_SC_CMD_SOFT_RESET ||
       buffer[0] >= CUPS_SC_CMD_MAX)
@@ -215,45 +211,45 @@ cupsSideChannelRead(
     _cupsBufferRelease(buffer);
 
     *command = CUPS_SC_CMD_NONE;
-    *status  = CUPS_SC_STATUS_BAD_MESSAGE;
+    *status = CUPS_SC_STATUS_BAD_MESSAGE;
 
     return (-1);
   }
 
   *command = (cups_sc_command_t)buffer[0];
 
- /*
-  * Validate the data length in the message...
-  */
+  /*
+   * Validate the data length in the message...
+   */
 
   templen = ((buffer[2] & 255) << 8) | (buffer[3] & 255);
 
   if (templen > 0 && (!data || !datalen))
   {
-   /*
-    * Either the response is bigger than the provided buffer or the
-    * response is bigger than we've read...
-    */
+    /*
+     * Either the response is bigger than the provided buffer or the
+     * response is bigger than we've read...
+     */
 
     *status = CUPS_SC_STATUS_TOO_BIG;
   }
   else if (!datalen || templen > *datalen || templen > (bytes - 4))
   {
-   /*
-    * Either the response is bigger than the provided buffer or the
-    * response is bigger than we've read...
-    */
+    /*
+     * Either the response is bigger than the provided buffer or the
+     * response is bigger than we've read...
+     */
 
     *status = CUPS_SC_STATUS_TOO_BIG;
   }
   else
   {
-   /*
-    * The response data will fit, copy it over and provide the actual
-    * length...
-    */
+    /*
+     * The response data will fit, copy it over and provide the actual
+     * length...
+     */
 
-    *status  = (cups_sc_status_t)buffer[1];
+    *status = (cups_sc_status_t)buffer[1];
     *datalen = templen;
 
     memcpy(data, buffer + 4, (size_t)templen);
@@ -265,7 +261,6 @@ cupsSideChannelRead(
 
   return (0);
 }
-
 
 /*
  * 'cupsSideChannelSNMPGet()' - Query a SNMP OID's value.
@@ -290,36 +285,36 @@ cupsSideChannelRead(
  * @since CUPS 1.4/macOS 10.6@
  */
 
-cups_sc_status_t			/* O  - Query status */
+cups_sc_status_t /* O  - Query status */
 cupsSideChannelSNMPGet(
-    const char *oid,			/* I  - OID to query */
-    char       *data,			/* I  - Buffer for OID value */
-    int        *datalen,		/* IO - Size of OID buffer on entry, size of value on return */
-    double     timeout)			/* I  - Timeout in seconds */
+    const char *oid, /* I  - OID to query */
+    char *data,      /* I  - Buffer for OID value */
+    int *datalen,    /* IO - Size of OID buffer on entry, size of value on return */
+    double timeout)  /* I  - Timeout in seconds */
 {
-  cups_sc_status_t	status;		/* Status of command */
-  cups_sc_command_t	rcommand;	/* Response command */
-  char			*real_data;	/* Real data buffer for response */
-  int			real_datalen,	/* Real length of data buffer */
-			real_oidlen;	/* Length of returned OID string */
-
+  cups_sc_status_t status;    /* Status of command */
+  cups_sc_command_t rcommand; /* Response command */
+  char *real_data;            /* Real data buffer for response */
+  int real_datalen,           /* Real length of data buffer */
+      real_oidlen;            /* Length of returned OID string */
 
   DEBUG_printf(("cupsSideChannelSNMPGet(oid=\"%s\", data=%p, datalen=%p(%d), "
-                "timeout=%.3f)", oid, data, datalen, datalen ? *datalen : -1,
-		timeout));
+                "timeout=%.3f)",
+                oid, data, datalen, datalen ? *datalen : -1,
+                timeout));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!oid || !*oid || !data || !datalen || *datalen < 2)
     return (CUPS_SC_STATUS_BAD_MESSAGE);
 
   *data = '\0';
 
- /*
-  * Send the request to the backend and wait for a response...
-  */
+  /*
+   * Send the request to the backend and wait for a response...
+   */
 
   if (cupsSideChannelWrite(CUPS_SC_CMD_SNMP_GET, CUPS_SC_STATUS_NONE, oid,
                            (int)strlen(oid) + 1, timeout))
@@ -343,11 +338,11 @@ cupsSideChannelSNMPGet(
 
   if (status == CUPS_SC_STATUS_OK)
   {
-   /*
-    * Parse the response of the form "oid\0value"...
-    */
+    /*
+     * Parse the response of the form "oid\0value"...
+     */
 
-    real_oidlen  = (int)strlen(real_data) + 1;
+    real_oidlen = (int)strlen(real_data) + 1;
     real_datalen -= real_oidlen;
 
     if ((real_datalen + 1) > *datalen)
@@ -366,7 +361,6 @@ cupsSideChannelSNMPGet(
 
   return (status);
 }
-
 
 /*
  * 'cupsSideChannelSNMPWalk()' - Query multiple SNMP OID values.
@@ -396,29 +390,29 @@ cupsSideChannelSNMPGet(
  * @since CUPS 1.4/macOS 10.6@
  */
 
-cups_sc_status_t			/* O - Status of first query of @code CUPS_SC_STATUS_OK@ on success */
+cups_sc_status_t /* O - Status of first query of @code CUPS_SC_STATUS_OK@ on success */
 cupsSideChannelSNMPWalk(
-    const char          *oid,		/* I - First numeric OID to query */
-    double              timeout,	/* I - Timeout for each query in seconds */
-    cups_sc_walk_func_t cb,		/* I - Function to call with each value */
-    void                *context)	/* I - Application-defined pointer to send to callback */
+    const char *oid,        /* I - First numeric OID to query */
+    double timeout,         /* I - Timeout for each query in seconds */
+    cups_sc_walk_func_t cb, /* I - Function to call with each value */
+    void *context)          /* I - Application-defined pointer to send to callback */
 {
-  cups_sc_status_t	status;		/* Status of command */
-  cups_sc_command_t	rcommand;	/* Response command */
-  char			*real_data;	/* Real data buffer for response */
-  int			real_datalen;	/* Real length of data buffer */
-  size_t		real_oidlen,	/* Length of returned OID string */
-			oidlen;		/* Length of first OID */
-  const char		*current_oid;	/* Current OID */
-  char			last_oid[2048];	/* Last OID */
-
+  cups_sc_status_t status;    /* Status of command */
+  cups_sc_command_t rcommand; /* Response command */
+  char *real_data;            /* Real data buffer for response */
+  int real_datalen;           /* Real length of data buffer */
+  size_t real_oidlen,         /* Length of returned OID string */
+      oidlen;                 /* Length of first OID */
+  const char *current_oid;    /* Current OID */
+  char last_oid[2048];        /* Last OID */
 
   DEBUG_printf(("cupsSideChannelSNMPWalk(oid=\"%s\", timeout=%.3f, cb=%p, "
-                "context=%p)", oid, timeout, cb, context));
+                "context=%p)",
+                oid, timeout, cb, context));
 
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (!oid || !*oid || !cb)
     return (CUPS_SC_STATUS_BAD_MESSAGE);
@@ -426,19 +420,19 @@ cupsSideChannelSNMPWalk(
   if ((real_data = _cupsBufferGet(_CUPS_SC_MAX_BUFFER)) == NULL)
     return (CUPS_SC_STATUS_TOO_BIG);
 
- /*
-  * Loop until the OIDs don't match...
-  */
+  /*
+   * Loop until the OIDs don't match...
+   */
 
   current_oid = oid;
-  oidlen      = strlen(oid);
+  oidlen = strlen(oid);
   last_oid[0] = '\0';
 
   do
   {
-   /*
-    * Send the request to the backend and wait for a response...
-    */
+    /*
+     * Send the request to the backend and wait for a response...
+     */
 
     if (cupsSideChannelWrite(CUPS_SC_CMD_SNMP_GET_NEXT, CUPS_SC_STATUS_NONE,
                              current_oid, (int)strlen(current_oid) + 1, timeout))
@@ -463,48 +457,46 @@ cupsSideChannelSNMPWalk(
 
     if (status == CUPS_SC_STATUS_OK)
     {
-     /*
-      * Parse the response of the form "oid\0value"...
-      */
+      /*
+       * Parse the response of the form "oid\0value"...
+       */
 
       if (strncmp(real_data, oid, oidlen) || real_data[oidlen] != '.' ||
           !strcmp(real_data, last_oid))
       {
-       /*
-        * Done with this set of OIDs...
-	*/
+        /*
+         * Done with this set of OIDs...
+         */
 
-	_cupsBufferRelease(real_data);
+        _cupsBufferRelease(real_data);
         return (CUPS_SC_STATUS_OK);
       }
 
       if ((size_t)real_datalen < sizeof(real_data))
         real_data[real_datalen] = '\0';
 
-      real_oidlen  = strlen(real_data) + 1;
+      real_oidlen = strlen(real_data) + 1;
       real_datalen -= (int)real_oidlen;
 
-     /*
-      * Call the callback with the OID and data...
-      */
+      /*
+       * Call the callback with the OID and data...
+       */
 
       (*cb)(real_data, real_data + real_oidlen, real_datalen, context);
 
-     /*
-      * Update the current OID...
-      */
+      /*
+       * Update the current OID...
+       */
 
       current_oid = real_data;
       strlcpy(last_oid, current_oid, sizeof(last_oid));
     }
-  }
-  while (status == CUPS_SC_STATUS_OK);
+  } while (status == CUPS_SC_STATUS_OK);
 
   _cupsBufferRelease(real_data);
 
   return (status);
 }
-
 
 /*
  * 'cupsSideChannelWrite()' - Write a side-channel message.
@@ -515,38 +507,37 @@ cupsSideChannelSNMPWalk(
  * @since CUPS 1.3/macOS 10.5@
  */
 
-int					/* O - 0 on success, -1 on error */
+int /* O - 0 on success, -1 on error */
 cupsSideChannelWrite(
-    cups_sc_command_t command,		/* I - Command code */
-    cups_sc_status_t  status,		/* I - Status code */
-    const char        *data,		/* I - Data buffer pointer */
-    int               datalen,		/* I - Number of bytes of data */
-    double            timeout)		/* I - Timeout in seconds */
+    cups_sc_command_t command, /* I - Command code */
+    cups_sc_status_t status,   /* I - Status code */
+    const char *data,          /* I - Data buffer pointer */
+    int datalen,               /* I - Number of bytes of data */
+    double timeout)            /* I - Timeout in seconds */
 {
-  char		*buffer;		/* Message buffer */
-  ssize_t	bytes;			/* Bytes written */
+  char *buffer;  /* Message buffer */
+  ssize_t bytes; /* Bytes written */
 #ifdef HAVE_POLL
-  struct pollfd	pfd;			/* Poll structure for poll() */
-#else /* select() */
-  fd_set	output_set;		/* Output set for select() */
-  struct timeval stimeout;		/* Timeout value for select() */
-#endif /* HAVE_POLL */
+  struct pollfd pfd; /* Poll structure for poll() */
+#else                /* select() */
+  fd_set output_set;       /* Output set for select() */
+  struct timeval stimeout; /* Timeout value for select() */
+#endif               /* HAVE_POLL */
 
-
- /*
-  * Range check input...
-  */
+  /*
+   * Range check input...
+   */
 
   if (command < CUPS_SC_CMD_SOFT_RESET || command >= CUPS_SC_CMD_MAX ||
       datalen < 0 || datalen > _CUPS_SC_MAX_DATA || (datalen > 0 && !data))
     return (-1);
 
- /*
-  * See if we can safely write to the side-channel socket...
-  */
+    /*
+     * See if we can safely write to the side-channel socket...
+     */
 
 #ifdef HAVE_POLL
-  pfd.fd     = CUPS_SC_FD;
+  pfd.fd = CUPS_SC_FD;
   pfd.events = POLLOUT;
 
   if (timeout < 0.0)
@@ -557,7 +548,7 @@ cupsSideChannelWrite(
   else if (poll(&pfd, 1, (int)(timeout * 1000)) < 1)
     return (-1);
 
-#else /* select() */
+#else  /* select() */
   FD_ZERO(&output_set);
   FD_SET(CUPS_SC_FD, &output_set);
 
@@ -568,7 +559,7 @@ cupsSideChannelWrite(
   }
   else
   {
-    stimeout.tv_sec  = (int)timeout;
+    stimeout.tv_sec = (int)timeout;
     stimeout.tv_usec = (int)(timeout * 1000000) % 1000000;
 
     if (select(CUPS_SC_FD + 1, NULL, &output_set, NULL, &stimeout) < 1)
@@ -576,16 +567,16 @@ cupsSideChannelWrite(
   }
 #endif /* HAVE_POLL */
 
- /*
-  * Write a side-channel message in the format:
-  *
-  * Byte(s)  Description
-  * -------  -------------------------------------------
-  * 0        Command code
-  * 1        Status code
-  * 2-3      Data length (network byte order) <= 16384
-  * 4-N      Data
-  */
+  /*
+   * Write a side-channel message in the format:
+   *
+   * Byte(s)  Description
+   * -------  -------------------------------------------
+   * 0        Command code
+   * 1        Status code
+   * 2-3      Data length (network byte order) <= 16384
+   * 4-N      Data
+   */
 
   if ((buffer = _cupsBufferGet((size_t)datalen + 4)) == NULL)
     return (-1);

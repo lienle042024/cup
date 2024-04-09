@@ -15,71 +15,66 @@
 #include <cups/debug-private.h>
 #include <cups/string-private.h>
 #include <signal.h>
-#include <cups/ipp-private.h>	/* TODO: Update so we don't need this */
-
+#include <cups/ipp-private.h> /* TODO: Update so we don't need this */
 
 /*
  * Local globals...
  */
 
-static int	terminate = 0;
-
+static int terminate = 0;
 
 /*
  * Local functions...
  */
 
-static void	print_attributes(ipp_t *ipp, int indent);
-static void	sigterm_handler(int sig);
-static void	usage(void) _CUPS_NORETURN;
-
+static void print_attributes(ipp_t *ipp, int indent);
+static void sigterm_handler(int sig);
+static void usage(void) _CUPS_NORETURN;
 
 /*
  * 'main()' - Subscribe to the .
  */
 
-int
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int main(int argc,     /* I - Number of command-line arguments */
+         char *argv[]) /* I - Command-line arguments */
 {
-  int		i;			/* Looping var */
-  const char	*uri;			/* URI to use */
-  int		num_events;		/* Number of events */
-  const char	*events[100];		/* Events */
-  int		subscription_id,	/* notify-subscription-id */
-		sequence_number,	/* notify-sequence-number */
-		interval;		/* Interval between polls */
-  http_t	*http;			/* HTTP connection */
-  ipp_t		*request,		/* IPP request */
-		*response;		/* IPP response */
-  ipp_attribute_t *attr;		/* Current attribute */
+  int i;                   /* Looping var */
+  const char *uri;         /* URI to use */
+  int num_events;          /* Number of events */
+  const char *events[100]; /* Events */
+  int subscription_id,     /* notify-subscription-id */
+      sequence_number,     /* notify-sequence-number */
+      interval;            /* Interval between polls */
+  http_t *http;            /* HTTP connection */
+  ipp_t *request,          /* IPP request */
+      *response;           /* IPP response */
+  ipp_attribute_t *attr;   /* Current attribute */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action; /* Actions for POSIX signals */
+#endif                     /* HAVE_SIGACTION && !HAVE_SIGSET */
 
-
- /*
-  * Parse command-line...
-  */
+  /*
+   * Parse command-line...
+   */
 
   num_events = 0;
-  uri        = NULL;
+  uri = NULL;
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
     if (!strcmp(argv[i], "-E"))
       cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
     else if (!strcmp(argv[i], "-e"))
     {
-      i ++;
+      i++;
       if (i >= argc || num_events >= 100)
         usage();
 
       events[num_events] = argv[i];
-      num_events ++;
+      num_events++;
     }
     else if (!strcmp(argv[i], "-h"))
     {
-      i ++;
+      i++;
       if (i >= argc)
         usage();
 
@@ -95,13 +90,13 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (num_events == 0)
   {
-    events[0]  = "all";
+    events[0] = "all";
     num_events = 1;
   }
 
- /*
-  * Connect to the server...
-  */
+  /*
+   * Connect to the server...
+   */
 
   if ((http = httpConnectEncrypt(cupsServer(), ippPort(),
                                  cupsEncryption())) == NULL)
@@ -110,9 +105,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (1);
   }
 
- /*
-  * Catch CTRL-C and SIGTERM...
-  */
+  /*
+   * Catch CTRL-C and SIGTERM...
+   */
 
 #ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
   sigset(SIGINT, sigterm_handler);
@@ -129,9 +124,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   signal(SIGTERM, sigterm_handler);
 #endif /* HAVE_SIGSET */
 
- /*
-  * Create the subscription...
-  */
+  /*
+   * Create the subscription...
+   */
 
   if (strstr(uri, "/jobs/"))
   {
@@ -179,17 +174,17 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   ippDelete(response);
 
- /*
-  * Monitor for events...
-  */
+  /*
+   * Monitor for events...
+   */
 
   sequence_number = 0;
 
   while (!terminate)
   {
-   /*
-    * Get the current events...
-    */
+    /*
+     * Get the current events...
+     */
 
     printf("\nGet-Notifications(%d,%d):", subscription_id, sequence_number);
     fflush(stdout);
@@ -224,10 +219,10 @@ main(int  argc,				/* I - Number of command-line arguments */
       for (attr = ippFindAttribute(response, "notify-sequence-number",
                                    IPP_TAG_INTEGER);
            attr;
-	   attr = ippFindNextAttribute(response, "notify-sequence-number",
-	                               IPP_TAG_INTEGER))
+           attr = ippFindNextAttribute(response, "notify-sequence-number",
+                                       IPP_TAG_INTEGER))
         if (attr->values[0].integer > sequence_number)
-	  sequence_number = attr->values[0].integer;
+          sequence_number = attr->values[0].integer;
     }
 
     if ((attr = ippFindAttribute(response, "notify-get-interval",
@@ -241,9 +236,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     sleep((unsigned)interval);
   }
 
- /*
-  * Cancel the subscription...
-  */
+  /*
+   * Cancel the subscription...
+   */
 
   printf("\nCancel-Subscription:");
   fflush(stdout);
@@ -269,107 +264,104 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (cupsLastError() >= IPP_BAD_REQUEST)
     fprintf(stderr, "Cancel-Subscription: %s\n", cupsLastErrorString());
 
- /*
-  * Close the connection and return...
-  */
+  /*
+   * Close the connection and return...
+   */
 
   httpClose(http);
 
   return (0);
 }
 
-
 /*
  * 'print_attributes()' - Print the attributes in a request...
  */
 
 static void
-print_attributes(ipp_t *ipp,		/* I - IPP request */
-                 int   indent)		/* I - Indentation */
+print_attributes(ipp_t *ipp, /* I - IPP request */
+                 int indent) /* I - Indentation */
 {
-  int			i;		/* Looping var */
-  ipp_tag_t		group;		/* Current group */
-  ipp_attribute_t	*attr;		/* Current attribute */
-  _ipp_value_t		*val;		/* Current value */
-  static const char * const tags[] =	/* Value/group tag strings */
-			{
-			  "reserved-00",
-			  "operation-attributes-tag",
-			  "job-attributes-tag",
-			  "end-of-attributes-tag",
-			  "printer-attributes-tag",
-			  "unsupported-attributes-tag",
-			  "subscription-attributes-tag",
-			  "event-attributes-tag",
-			  "reserved-08",
-			  "reserved-09",
-			  "reserved-0A",
-			  "reserved-0B",
-			  "reserved-0C",
-			  "reserved-0D",
-			  "reserved-0E",
-			  "reserved-0F",
-			  "unsupported",
-			  "default",
-			  "unknown",
-			  "no-value",
-			  "reserved-14",
-			  "not-settable",
-			  "delete-attr",
-			  "admin-define",
-			  "reserved-18",
-			  "reserved-19",
-			  "reserved-1A",
-			  "reserved-1B",
-			  "reserved-1C",
-			  "reserved-1D",
-			  "reserved-1E",
-			  "reserved-1F",
-			  "reserved-20",
-			  "integer",
-			  "boolean",
-			  "enum",
-			  "reserved-24",
-			  "reserved-25",
-			  "reserved-26",
-			  "reserved-27",
-			  "reserved-28",
-			  "reserved-29",
-			  "reserved-2a",
-			  "reserved-2b",
-			  "reserved-2c",
-			  "reserved-2d",
-			  "reserved-2e",
-			  "reserved-2f",
-			  "octetString",
-			  "dateTime",
-			  "resolution",
-			  "rangeOfInteger",
-			  "begCollection",
-			  "textWithLanguage",
-			  "nameWithLanguage",
-			  "endCollection",
-			  "reserved-38",
-			  "reserved-39",
-			  "reserved-3a",
-			  "reserved-3b",
-			  "reserved-3c",
-			  "reserved-3d",
-			  "reserved-3e",
-			  "reserved-3f",
-			  "reserved-40",
-			  "textWithoutLanguage",
-			  "nameWithoutLanguage",
-			  "reserved-43",
-			  "keyword",
-			  "uri",
-			  "uriScheme",
-			  "charset",
-			  "naturalLanguage",
-			  "mimeMediaType",
-			  "memberName"
-			};
-
+  int i;                            /* Looping var */
+  ipp_tag_t group;                  /* Current group */
+  ipp_attribute_t *attr;            /* Current attribute */
+  _ipp_value_t *val;                /* Current value */
+  static const char *const tags[] = /* Value/group tag strings */
+      {
+          "reserved-00",
+          "operation-attributes-tag",
+          "job-attributes-tag",
+          "end-of-attributes-tag",
+          "printer-attributes-tag",
+          "unsupported-attributes-tag",
+          "subscription-attributes-tag",
+          "event-attributes-tag",
+          "reserved-08",
+          "reserved-09",
+          "reserved-0A",
+          "reserved-0B",
+          "reserved-0C",
+          "reserved-0D",
+          "reserved-0E",
+          "reserved-0F",
+          "unsupported",
+          "default",
+          "unknown",
+          "no-value",
+          "reserved-14",
+          "not-settable",
+          "delete-attr",
+          "admin-define",
+          "reserved-18",
+          "reserved-19",
+          "reserved-1A",
+          "reserved-1B",
+          "reserved-1C",
+          "reserved-1D",
+          "reserved-1E",
+          "reserved-1F",
+          "reserved-20",
+          "integer",
+          "boolean",
+          "enum",
+          "reserved-24",
+          "reserved-25",
+          "reserved-26",
+          "reserved-27",
+          "reserved-28",
+          "reserved-29",
+          "reserved-2a",
+          "reserved-2b",
+          "reserved-2c",
+          "reserved-2d",
+          "reserved-2e",
+          "reserved-2f",
+          "octetString",
+          "dateTime",
+          "resolution",
+          "rangeOfInteger",
+          "begCollection",
+          "textWithLanguage",
+          "nameWithLanguage",
+          "endCollection",
+          "reserved-38",
+          "reserved-39",
+          "reserved-3a",
+          "reserved-3b",
+          "reserved-3c",
+          "reserved-3d",
+          "reserved-3e",
+          "reserved-3f",
+          "reserved-40",
+          "textWithoutLanguage",
+          "nameWithoutLanguage",
+          "reserved-43",
+          "keyword",
+          "uri",
+          "uriScheme",
+          "charset",
+          "naturalLanguage",
+          "mimeMediaType",
+          "memberName"};
 
   for (group = IPP_TAG_ZERO, attr = ipp->attrs; attr; attr = attr->next)
   {
@@ -385,13 +377,13 @@ print_attributes(ipp_t *ipp,		/* I - IPP request */
       group = attr->group_tag;
 
       putchar('\n');
-      for (i = 4; i < indent; i ++)
+      for (i = 4; i < indent; i++)
         putchar(' ');
 
       printf("%s:\n\n", tags[group]);
     }
 
-    for (i = 0; i < indent; i ++)
+    for (i = 0; i < indent; i++)
       putchar(' ');
 
     printf("%s (", attr->name);
@@ -401,89 +393,87 @@ print_attributes(ipp_t *ipp,		/* I - IPP request */
 
     switch (attr->value_tag)
     {
-      case IPP_TAG_ENUM :
-      case IPP_TAG_INTEGER :
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	    printf(" %d", val->integer);
+    case IPP_TAG_ENUM:
+    case IPP_TAG_INTEGER:
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" %d", val->integer);
+      putchar('\n');
+      break;
+
+    case IPP_TAG_BOOLEAN:
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" %s", val->boolean ? "true" : "false");
+      putchar('\n');
+      break;
+
+    case IPP_TAG_RANGE:
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" %d-%d", val->range.lower, val->range.upper);
+      putchar('\n');
+      break;
+
+    case IPP_TAG_DATE:
+    {
+      char vstring[256]; /* Formatted time */
+
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" (%s)", _cupsStrDate(vstring, sizeof(vstring), ippDateToTime(val->date)));
+    }
+      putchar('\n');
+      break;
+
+    case IPP_TAG_RESOLUTION:
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" %dx%d%s", val->resolution.xres, val->resolution.yres,
+               val->resolution.units == IPP_RES_PER_INCH ? "dpi" : "dpcm");
+      putchar('\n');
+      break;
+
+    case IPP_TAG_STRING:
+    case IPP_TAG_TEXTLANG:
+    case IPP_TAG_NAMELANG:
+    case IPP_TAG_TEXT:
+    case IPP_TAG_NAME:
+    case IPP_TAG_KEYWORD:
+    case IPP_TAG_URI:
+    case IPP_TAG_URISCHEME:
+    case IPP_TAG_CHARSET:
+    case IPP_TAG_LANGUAGE:
+    case IPP_TAG_MIMETYPE:
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+        printf(" \"%s\"", val->string.text);
+      putchar('\n');
+      break;
+
+    case IPP_TAG_BEGIN_COLLECTION:
+      putchar('\n');
+
+      for (i = 0, val = attr->values; i < attr->num_values; i++, val++)
+      {
+        if (i)
           putchar('\n');
-          break;
+        print_attributes(val->collection, indent + 4);
+      }
+      break;
 
-      case IPP_TAG_BOOLEAN :
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	    printf(" %s", val->boolean ? "true" : "false");
-          putchar('\n');
-          break;
-
-      case IPP_TAG_RANGE :
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	    printf(" %d-%d", val->range.lower, val->range.upper);
-          putchar('\n');
-          break;
-
-      case IPP_TAG_DATE :
-          {
-	    char	vstring[256];	/* Formatted time */
-
-	    for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	      printf(" (%s)", _cupsStrDate(vstring, sizeof(vstring), ippDateToTime(val->date)));
-          }
-          putchar('\n');
-          break;
-
-      case IPP_TAG_RESOLUTION :
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	    printf(" %dx%d%s", val->resolution.xres, val->resolution.yres,
-	           val->resolution.units == IPP_RES_PER_INCH ? "dpi" : "dpcm");
-          putchar('\n');
-          break;
-
-      case IPP_TAG_STRING :
-      case IPP_TAG_TEXTLANG :
-      case IPP_TAG_NAMELANG :
-      case IPP_TAG_TEXT :
-      case IPP_TAG_NAME :
-      case IPP_TAG_KEYWORD :
-      case IPP_TAG_URI :
-      case IPP_TAG_URISCHEME :
-      case IPP_TAG_CHARSET :
-      case IPP_TAG_LANGUAGE :
-      case IPP_TAG_MIMETYPE :
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	    printf(" \"%s\"", val->string.text);
-          putchar('\n');
-          break;
-
-      case IPP_TAG_BEGIN_COLLECTION :
-          putchar('\n');
-
-          for (i = 0, val = attr->values; i < attr->num_values; i ++, val ++)
-	  {
-	    if (i)
-	      putchar('\n');
-	    print_attributes(val->collection, indent + 4);
-	  }
-          break;
-
-      default :
-          printf("UNKNOWN (%d values)\n", attr->num_values);
-          break;
+    default:
+      printf("UNKNOWN (%d values)\n", attr->num_values);
+      break;
     }
   }
 }
-
 
 /*
  * 'sigterm_handler()' - Flag when the user hits CTRL-C...
  */
 
 static void
-sigterm_handler(int sig)		/* I - Signal number (unused) */
+sigterm_handler(int sig) /* I - Signal number (unused) */
 {
   (void)sig;
 
   terminate = 1;
 }
-
 
 /*
  * 'usage()' - Show program usage...

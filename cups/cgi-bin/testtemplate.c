@@ -13,60 +13,58 @@
 
 #include "cgi.h"
 
-
 /*
  * 'main()' - Test the template code.
  */
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int                /* O - Exit status */
+main(int argc,     /* I - Number of command-line arguments */
+     char *argv[]) /* I - Command-line arguments */
 {
-  int	i;				/* Looping var */
-  char	*value;				/* Value in name=value */
-  FILE	*out;				/* Where to send output */
+  int i;       /* Looping var */
+  char *value; /* Value in name=value */
+  FILE *out;   /* Where to send output */
 
-
- /*
-  * Don't buffer stdout or stderr so that the mixed output is sane...
-  */
+  /*
+   * Don't buffer stdout or stderr so that the mixed output is sane...
+   */
 
   setbuf(stdout, NULL);
   setbuf(stderr, NULL);
 
- /*
-  * Loop through the command-line, assigning variables for any args with
-  * "name=value"...
-  */
+  /*
+   * Loop through the command-line, assigning variables for any args with
+   * "name=value"...
+   */
 
   out = stdout;
 
-  for (i = 1; i < argc; i ++)
+  for (i = 1; i < argc; i++)
   {
     if (!strcmp(argv[i], "-o"))
     {
-      i ++;
+      i++;
       if (i < argc)
       {
         out = fopen(argv[i], "w");
-	if (!out)
-	{
-	  perror(argv[i]);
-	  return (1);
-	}
+        if (!out)
+        {
+          perror(argv[i]);
+          return (1);
+        }
       }
     }
     else if (!strcmp(argv[i], "-e"))
     {
-      i ++;
+      i++;
 
       if (i < argc)
       {
         if (!freopen(argv[i], "w", stderr))
-	{
-	  perror(argv[i]);
-	  return (1);
-	}
+        {
+          perror(argv[i]);
+          return (1);
+        }
       }
     }
     else if (!strcmp(argv[i], "-q"))
@@ -80,9 +78,9 @@ main(int  argc,				/* I - Number of command-line arguments */
       cgiCopyTemplateFile(out, argv[i]);
   }
 
- /*
-  * Return with no errors...
-  */
+  /*
+   * Return with no errors...
+   */
 
   return (0);
 }

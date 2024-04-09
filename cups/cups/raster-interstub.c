@@ -13,13 +13,11 @@
 
 #include <cups/ppd-private.h>
 
-
 /*
  * This stub wraps the _cupsRasterInterpretPPD function in libcups - this allows
  * one library to provide all of the CUPS API functions while still supporting
  * the old split library organization...
  */
-
 
 /*
  * 'cupsRasterInterpretPPD()' - Interpret PPD commands to create a page header.
@@ -51,13 +49,13 @@
  * @since CUPS 1.2/macOS 10.5@
  */
 
-int					/* O - 0 on success, -1 on failure */
+int /* O - 0 on success, -1 on failure */
 cupsRasterInterpretPPD(
-    cups_page_header2_t *h,		/* O - Page header to create */
-    ppd_file_t          *ppd,		/* I - PPD file */
-    int                 num_options,	/* I - Number of options */
-    cups_option_t       *options,	/* I - Options */
-    cups_interpret_cb_t func)		/* I - Optional page header callback (@code NULL@ for none) */
+    cups_page_header2_t *h,   /* O - Page header to create */
+    ppd_file_t *ppd,          /* I - PPD file */
+    int num_options,          /* I - Number of options */
+    cups_option_t *options,   /* I - Options */
+    cups_interpret_cb_t func) /* I - Optional page header callback (@code NULL@ for none) */
 {
   return (_cupsRasterInterpretPPD(h, ppd, num_options, options, func));
 }

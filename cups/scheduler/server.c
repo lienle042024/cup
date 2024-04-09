@@ -15,58 +15,55 @@
 #include "cupsd.h"
 #include <grp.h>
 #ifdef HAVE_NOTIFY_H
-#  include <notify.h>
+#include <notify.h>
 #endif /* HAVE_NOTIFY_H */
-
 
 /*
  * Local globals...
  */
 
-static int		started = 0;	/* Did we start the server already? */
-
+static int started = 0; /* Did we start the server already? */
 
 /*
  * 'cupsdStartServer()' - Start the server.
  */
 
-void
-cupsdStartServer(void)
+void cupsdStartServer(void)
 {
- /*
-  * Create the default security profile...
-  */
+  /*
+   * Create the default security profile...
+   */
 
   DefaultProfile = cupsdCreateProfile(0, 1);
 
 #ifdef HAVE_SANDBOX_H
   if (!DefaultProfile && UseSandboxing && Sandboxing != CUPSD_SANDBOXING_OFF)
   {
-   /*
-    * Failure to create the sandbox profile means something really bad has
-    * happened and we need to shutdown immediately.
-    */
+    /*
+     * Failure to create the sandbox profile means something really bad has
+     * happened and we need to shutdown immediately.
+     */
 
     return;
   }
 #endif /* HAVE_SANDBOX_H */
 
- /*
-  * Start color management (as needed)...
-  */
+  /*
+   * Start color management (as needed)...
+   */
 
   cupsdStartColor();
 
- /*
-  * Startup all the networking stuff...
-  */
+  /*
+   * Startup all the networking stuff...
+   */
 
   cupsdStartListening();
   cupsdStartBrowsing();
 
- /*
-  * Create a pipe for CGI processes...
-  */
+  /*
+   * Create a pipe for CGI processes...
+   */
 
   if (cupsdOpenPipe(CGIPipes))
     cupsdLogMessage(CUPSD_LOG_ERROR,
@@ -78,37 +75,35 @@ cupsdStartServer(void)
     cupsdAddSelect(CGIPipes[0], (cupsd_selfunc_t)cupsdUpdateCGI, NULL, NULL);
   }
 
- /*
-  * Mark that the server has started and printers and jobs may be changed...
-  */
+  /*
+   * Mark that the server has started and printers and jobs may be changed...
+   */
 
   LastEvent = CUPSD_EVENT_PRINTER_CHANGED | CUPSD_EVENT_JOB_STATE_CHANGED |
               CUPSD_EVENT_SERVER_STARTED;
-  started   = 1;
+  started = 1;
 
   cupsdSetBusyState(0);
 }
-
 
 /*
  * 'cupsdStopServer()' - Stop the server.
  */
 
-void
-cupsdStopServer(void)
+void cupsdStopServer(void)
 {
   if (!started)
     return;
 
- /*
-  * Stop color management (as needed)...
-  */
+  /*
+   * Stop color management (as needed)...
+   */
 
   cupsdStopColor();
 
- /*
-  * Close all network clients...
-  */
+  /*
+   * Close all network clients...
+   */
 
   cupsdCloseAllClients();
   cupsdStopListening();
@@ -122,9 +117,9 @@ cupsdStopServer(void)
     Clients = NULL;
   }
 
- /*
-  * Close the pipe for CGI processes...
-  */
+  /*
+   * Close the pipe for CGI processes...
+   */
 
   if (CGIPipes[0] >= 0)
   {
@@ -137,9 +132,9 @@ cupsdStopServer(void)
     CGIPipes[1] = -1;
   }
 
- /*
-  * Close all log files...
-  */
+  /*
+   * Close all log files...
+   */
 
   if (AccessFile != NULL)
   {
@@ -165,25 +160,25 @@ cupsdStopServer(void)
     PageFile = NULL;
   }
 
- /*
-  * Delete the default security profile...
-  */
+  /*
+   * Delete the default security profile...
+   */
 
   cupsdDestroyProfile(DefaultProfile);
   DefaultProfile = NULL;
 
- /*
-  * Expire subscriptions and clean out old jobs...
-  */
+  /*
+   * Expire subscriptions and clean out old jobs...
+   */
 
   cupsdExpireSubscriptions(NULL, NULL);
 
   if (JobHistoryUpdate)
     cupsdCleanJobs();
 
- /*
-  * Write out any dirty files...
-  */
+  /*
+   * Write out any dirty files...
+   */
 
   if (DirtyFiles)
     cupsdCleanDirty();

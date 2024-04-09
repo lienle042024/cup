@@ -15,11 +15,10 @@
 #include <cups/debug-private.h>
 #include <cups/language-private.h>
 #include <cups/string-private.h>
-#include <cups/ipp-private.h>	/* TODO: Update so we don't need this */
-
+#include <cups/ipp-private.h> /* TODO: Update so we don't need this */
 
 /*
  * Limits...
  */
 
-#define CUPS_PAGE_MAX	100		/* Maximum items per page */
+#define CUPS_PAGE_MAX 100 /* Maximum items per page */
